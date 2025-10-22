@@ -8,6 +8,32 @@ html {
     min-height: 100vh;
 }
 
+/* Grid Background Pattern */
+.grid-background {
+    position: relative;
+    background-color: #000000;
+}
+
+.grid-background::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-image: 
+        linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+    background-size: 50px 50px;
+    pointer-events: none;
+    z-index: 0;
+}
+
+.grid-background > * {
+    position: relative;
+    z-index: 1;
+}
+
 /* Animation delays for staggered effects */
 .delay-100 {
     animation-delay: 0.1s;
