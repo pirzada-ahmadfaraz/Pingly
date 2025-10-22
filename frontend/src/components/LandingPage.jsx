@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from './ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './ui/accordion';
@@ -7,18 +7,23 @@ import { Tabs, TabsList, TabsTrigger } from './ui/tabs';
 import { 
   Globe, Activity, Shield, Calendar, Users, TrendingUp, Code, 
   Wrench, Bell, Mail, Send, MessageCircle, Hash, MessageSquare, 
-  Smartphone, AlertCircle, Check, ArrowRight, Menu, X 
+  Smartphone, AlertCircle, Check, ArrowRight, Menu, X, ChevronLeft, ChevronRight,
+  Zap, Layout, BarChart
 } from 'lucide-react';
 import { features, additionalFeatures, notificationChannels, pricingPlans, faqs } from '../mockData';
 
 const iconMap = {
   Globe, Activity, Shield, Calendar, Users, TrendingUp, Code, Wrench, Bell,
-  Mail, Send, MessageCircle, Hash, MessageSquare, Smartphone, AlertCircle
+  Mail, Send, MessageCircle, Hash, MessageSquare, Smartphone, AlertCircle,
+  Zap, Layout, BarChart
 };
 
 const LandingPage = () => {
   const [billingCycle, setBillingCycle] = useState('monthly');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [currentSlide, setCurrentSlide] = useState(0);
+  const slidesPerView = 3;
+  const totalSlides = Math.ceil(additionalFeatures.length / slidesPerView);
 
   const scrollToSection = (sectionId) => {
     const element = document.getElementById(sectionId);
@@ -28,12 +33,30 @@ const LandingPage = () => {
     }
   };
 
+  const nextSlide = () => {
+    setCurrentSlide((prev) => (prev + 1) % totalSlides);
+  };
+
+  const prevSlide = () => {
+    setCurrentSlide((prev) => (prev - 1 + totalSlides) % totalSlides);
+  };
+
+  useEffect(() => {
+    const interval = setInterval(nextSlide, 5000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const getCurrentSlideFeatures = () => {
+    const start = currentSlide * slidesPerView;
+    return additionalFeatures.slice(start, start + slidesPerView);
+  };
+
   return (
-    <div className="min-h-screen bg-black text-white">
+    <div className="min-h-screen bg-black text-white grid-background">
       {/* Header/Navigation */}
       <header className="fixed top-0 left-0 right-0 z-50 bg-black/80 backdrop-blur-md border-b border-white/10">
         <nav className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="text-2xl font-bold">UptimeMonitor</div>
+          <div className="text-2xl font-bold">Pingly</div>
           
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center gap-8">
@@ -65,9 +88,6 @@ const LandingPage = () => {
       {/* Hero Section */}
       <section className="pt-32 pb-20 px-4">
         <div className="container mx-auto text-center">
-          <div className="inline-block mb-4">
-            <Badge className="bg-white text-black hover:bg-gray-200 px-4 py-2 text-sm">Lifetime Deal Available</Badge>
-          </div>
           <h1 className="text-5xl md:text-7xl font-bold mb-6 leading-tight">
             Uptime Monitoring<br />and Status Pages.<br />
             <span className="text-gray-400">without Breaking the Bank</span>
@@ -156,32 +176,67 @@ const LandingPage = () => {
         </div>
       </section>
 
-      {/* Additional Features Carousel */}
+      {/* Additional Features Slider */}
       <section className="py-20 px-4 bg-gradient-to-b from-transparent to-white/5">
         <div className="container mx-auto">
           <div className="text-center mb-12">
             <Badge className="bg-white/10 text-white border-white/20 mb-4">Features</Badge>
-            <h2 className="text-4xl md:text-5xl font-bold mb-4">What UptimeMonitor offers?</h2>
+            <h2 className="text-4xl md:text-5xl font-bold mb-4">What Pingly offers?</h2>
             <p className="text-xl text-gray-400">Comprehensive monitoring tools for your online presence</p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {additionalFeatures.map((feature) => {
-              const Icon = iconMap[feature.icon];
-              return (
-                <Card key={feature.id} className="bg-white/5 border-white/10 hover:border-white/30 transition-all">
-                  <CardHeader>
-                    <div className="w-12 h-12 bg-white/10 rounded-lg flex items-center justify-center mb-4">
-                      {Icon && <Icon size={24} />}
-                    </div>
-                    <CardTitle className="text-white text-xl">{feature.title}</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <CardDescription className="text-gray-400">{feature.description}</CardDescription>
-                  </CardContent>
-                </Card>
-              );
-            })}
+          {/* Slider Container */}
+          <div className="relative">
+            <div className="overflow-hidden">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {getCurrentSlideFeatures().map((feature) => {
+                  const Icon = iconMap[feature.icon];
+                  return (
+                    <Card key={feature.id} className="bg-white/5 border-white/10 hover:border-white/30 transition-all">
+                      <CardHeader>
+                        <div className="w-12 h-12 bg-white/10 rounded-lg flex items-center justify-center mb-4">
+                          {Icon && <Icon size={24} />}
+                        </div>
+                        <CardTitle className="text-white text-xl">{feature.title}</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <CardDescription className="text-gray-400">{feature.description}</CardDescription>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Navigation Buttons */}
+            <button
+              onClick={prevSlide}
+              className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 bg-white/10 hover:bg-white/20 rounded-full p-3 transition-all backdrop-blur-sm border border-white/10"
+              aria-label="Previous slide"
+            >
+              <ChevronLeft size={24} />
+            </button>
+            <button
+              onClick={nextSlide}
+              className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 bg-white/10 hover:bg-white/20 rounded-full p-3 transition-all backdrop-blur-sm border border-white/10"
+              aria-label="Next slide"
+            >
+              <ChevronRight size={24} />
+            </button>
+
+            {/* Slide Indicators */}
+            <div className="flex justify-center gap-2 mt-8">
+              {[...Array(totalSlides)].map((_, index) => (
+                <button
+                  key={index}
+                  onClick={() => setCurrentSlide(index)}
+                  className={`h-2 rounded-full transition-all ${
+                    currentSlide === index ? 'w-8 bg-white' : 'w-2 bg-white/30'
+                  }`}
+                  aria-label={`Go to slide ${index + 1}`}
+                />
+              ))}
+            </div>
           </div>
         </div>
       </section>
@@ -253,8 +308,8 @@ const LandingPage = () => {
         <div className="container mx-auto">
           <div className="text-center mb-12">
             <Badge className="bg-white/10 text-white border-white/20 mb-4">Pricing</Badge>
-            <h2 className="text-4xl md:text-5xl font-bold mb-6">Early Bird Special Lifetime Membership</h2>
-            <p className="text-xl text-gray-400 mb-8">Join our early supporters and enjoy access forever at a one-time price.</p>
+            <h2 className="text-4xl md:text-5xl font-bold mb-6">Simple, Transparent Pricing</h2>
+            <p className="text-xl text-gray-400 mb-8">Choose the plan that fits your needs</p>
 
             <Tabs value={billingCycle} onValueChange={setBillingCycle} className="inline-block">
               <TabsList className="bg-white/10">
@@ -272,9 +327,6 @@ const LandingPage = () => {
                 plan.popular ? 'ring-2 ring-white scale-105' : ''
               }`}>
                 <CardHeader>
-                  {plan.badge && (
-                    <Badge className="bg-white text-black w-fit mb-2">{plan.badge}</Badge>
-                  )}
                   {plan.popular && (
                     <Badge className="bg-white text-black w-fit mb-2">Most Popular</Badge>
                   )}
@@ -284,7 +336,7 @@ const LandingPage = () => {
                       ${billingCycle === 'monthly' ? plan.price.monthly : plan.price.yearly}
                     </span>
                     <span className="text-gray-400">
-                      {plan.oneTime ? '/one-time' : billingCycle === 'monthly' ? '/month' : '/year'}
+                      {billingCycle === 'monthly' ? '/month' : '/year'}
                     </span>
                   </div>
                   <CardDescription className="text-gray-400 mt-2">{plan.description}</CardDescription>
@@ -350,7 +402,7 @@ const LandingPage = () => {
         <div className="container mx-auto">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
             <div>
-              <h3 className="text-xl font-bold mb-4">UptimeMonitor</h3>
+              <h3 className="text-xl font-bold mb-4">Pingly</h3>
               <p className="text-gray-400 text-sm">Reliable uptime monitoring and status pages for your business.</p>
             </div>
             <div>
@@ -378,7 +430,7 @@ const LandingPage = () => {
             </div>
           </div>
           <div className="border-t border-white/10 pt-8 text-center text-sm text-gray-400">
-            <p>&copy; 2024 UptimeMonitor. All rights reserved.</p>
+            <p>&copy; 2024 Pingly. All rights reserved.</p>
           </div>
         </div>
       </footer>

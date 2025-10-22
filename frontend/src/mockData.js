@@ -57,6 +57,24 @@ export const additionalFeatures = [
     title: 'Versatile Notification Channels',
     description: 'Stay informed with instant alerts via your preferred channels—Email, Telegram, and more.',
     icon: 'Bell'
+  },
+  {
+    id: 6,
+    title: 'Real-time Alerts',
+    description: 'Get notified instantly when your services go down or come back online.',
+    icon: 'Zap'
+  },
+  {
+    id: 7,
+    title: 'Status Page Builder',
+    description: 'Create beautiful, branded status pages to keep your users informed.',
+    icon: 'Layout'
+  },
+  {
+    id: 8,
+    title: 'Performance Analytics',
+    description: 'Comprehensive analytics and reporting for all your monitored services.',
+    icon: 'BarChart'
   }
 ];
 
@@ -109,31 +127,29 @@ export const pricingPlans = [
   },
   {
     id: 3,
-    name: 'Lifetime',
-    price: { monthly: 99, yearly: 99 },
-    oneTime: true,
-    description: 'Limited time offer',
+    name: 'Business',
+    price: { monthly: 10, yearly: 96 },
+    description: 'For growing teams.',
     features: [
-      'Up to 10 monitors of 60 sec frequency',
+      'Unlimited monitors of 30 sec frequency',
       'HTTP, Ping, SSL & Domain Monitors',
       '6 Region HTTP monitoring',
-      '8+ notification channels',
-      '2 fully featured status pages',
-      '1 login seat included',
-      '90 days data retention',
-      'Access to all upcoming features'
+      'All notification channels',
+      'Unlimited status pages',
+      '5 login seats included',
+      'Unlimited data retention',
+      'Priority support'
     ],
     cta: 'Subscribe Now',
-    popular: false,
-    badge: 'Early Bird Special'
+    popular: false
   }
 ];
 
 export const faqs = [
   {
     id: 1,
-    question: 'What does the Lifetime Deal for early supporters include?',
-    answer: 'The Lifetime Deal includes up to 10 monitors with 60-second frequency, all monitoring types (HTTP, Ping, SSL, Domain), 6-region monitoring, 8+ notification channels, 2 status pages, 1 login seat, 90 days data retention, and access to all upcoming features - all for a one-time payment.'
+    question: 'How does Pingly work?',
+    answer: 'Pingly monitors your websites, APIs, and servers at regular intervals from multiple global regions. When an issue is detected, you\'ll receive instant notifications through your preferred channels.'
   },
   {
     id: 2,
@@ -142,18 +158,18 @@ export const faqs = [
   },
   {
     id: 3,
-    question: 'Can I upgrade my plan after choosing the Lifetime Deal?',
-    answer: 'The Lifetime Deal is our highest tier offering. However, if you need more monitors or additional features, you can purchase add-ons at any time.'
+    question: 'Can I upgrade or downgrade my plan?',
+    answer: 'Absolutely! You can upgrade or downgrade your plan at any time. Changes will be reflected in your next billing cycle.'
   },
   {
     id: 4,
-    question: 'How does the monitoring system work?',
-    answer: 'Our monitoring system checks your websites, APIs, and servers at regular intervals from multiple global regions. When an issue is detected, you\'ll receive instant notifications through your preferred channels.'
+    question: 'What notification channels do you support?',
+    answer: 'We support Email, Telegram, Discord, Slack, Microsoft Teams, Webhooks, Google Chat, Twilio SMS, and PagerDuty. You can configure multiple channels for redundancy.'
   },
   {
     id: 5,
-    question: 'How often does the system check my website\'s uptime?',
-    answer: 'Check frequency depends on your plan. Free plans check every 5 minutes, while Pro and Lifetime plans offer 60-second intervals for more responsive monitoring.'
+    question: 'How often does Pingly check my website\'s uptime?',
+    answer: 'Check frequency depends on your plan. Free plans check every 5 minutes, Pro plans offer 60-second intervals, and Business plans provide 30-second monitoring for maximum responsiveness.'
   }
 ];
 
