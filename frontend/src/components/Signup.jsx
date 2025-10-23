@@ -86,48 +86,51 @@ const Signup = () => {
     setLoading(true);
     setError('');
     
-    // Create a popup window for Google OAuth
-    const redirectUri = `${window.location.origin}/auth/google/callback`;
-    const googleAuthUrl = `https://accounts.google.com/oauth/authorize?` +
-      `client_id=${process.env.REACT_APP_GOOGLE_CLIENT_ID}&` +
-      `response_type=code&` +
-      `scope=openid%20email%20profile&` +
-      `redirect_uri=${encodeURIComponent(redirectUri)}&` +
-      `access_type=offline&` +
-      `prompt=select_account`;
-    
-    console.log('Google Auth URL:', googleAuthUrl);
-    console.log('Redirect URI:', redirectUri);
-    console.log('Client ID:', process.env.REACT_APP_GOOGLE_CLIENT_ID);
-    
-    const popup = window.open(
-      googleAuthUrl,
-      'googleAuth',
-      'width=500,height=600,scrollbars=yes,resizable=yes,top=100,left=100'
-    );
-    
-    // Listen for messages from popup
-    const messageListener = (event) => {
-      if (event.origin !== window.location.origin) return;
+    if (window.google) {
+      // Use Google Identity Services (more reliable)
+      window.google.accounts.id.initialize({
+        client_id: process.env.REACT_APP_GOOGLE_CLIENT_ID,
+        callback: handleGoogleCallback,
+        auto_select: false,
+        cancel_on_tap_outside: true,
+      });
       
-      if (event.data.type === 'GOOGLE_AUTH_SUCCESS') {
-        handleGoogleCallback({ credential: event.data.credential });
-        popup?.close();
-        window.removeEventListener('message', messageListener);
-      } else if (event.data.type === 'GOOGLE_AUTH_ERROR') {
-        setError(event.data.error || 'Google authentication failed');
-        setLoading(false);
-        popup?.close();
-        window.removeEventListener('message', messageListener);
-      }
-    };
-    
-    window.addEventListener('message', messageListener);
-    
-    // Fallback: reset loading state after 30 seconds
-    setTimeout(() => {
+      // Use renderButton to create a proper Google Sign-In button
+      const buttonDiv = document.createElement('div');
+      buttonDiv.id = 'google-signin-button';
+      buttonDiv.style.display = 'none';
+      document.body.appendChild(buttonDiv);
+      
+      window.google.accounts.id.renderButton(buttonDiv, {
+        theme: 'outline',
+        size: 'large',
+        text: 'signin_with',
+        shape: 'rectangular',
+        logo_alignment: 'left',
+        width: '100%'
+      });
+      
+      // Trigger the button click programmatically
+      setTimeout(() => {
+        const googleButton = buttonDiv.querySelector('div[role="button"]');
+        if (googleButton) {
+          googleButton.click();
+        } else {
+          // Fallback to prompt
+          window.google.accounts.id.prompt();
+        }
+        
+        // Clean up
+        setTimeout(() => {
+          if (buttonDiv.parentNode) {
+            buttonDiv.parentNode.removeChild(buttonDiv);
+          }
+        }, 1000);
+      }, 100);
+    } else {
+      setError('Google Sign-In not loaded. Please refresh the page.');
       setLoading(false);
-    }, 30000);
+    }
   };
 
   const handleGoogleCallback = async (response) => {
