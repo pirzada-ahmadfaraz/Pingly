@@ -4,7 +4,7 @@ import dotenv from 'dotenv';
 import { MongoClient } from 'mongodb';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
-import { Resend } from 'resend';
+import { createClient } from '@supabase/supabase-js';
 import jwt from 'jsonwebtoken';
 import { OAuth2Client } from 'google-auth-library';
 
@@ -29,7 +29,12 @@ let client;
 
 const JWT_SECRET = process.env.JWT_SECRET || 'change-this-secret';
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
-const resend = new Resend(process.env.RESEND_API_KEY);
+
+// Initialize Supabase
+const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_ANON_KEY
+);
 
 async function connectDB() {
   try {
@@ -47,6 +52,8 @@ function generateOTP() {
   return Math.floor(100000 + Math.random() * 900000).toString();
 }
 
+// Supabase handles OTP sending automatically
+
 app.post('/api/auth/send-otp', async (req, res) => {
   try {
     const { email } = req.body;
@@ -55,17 +62,27 @@ app.post('/api/auth/send-otp', async (req, res) => {
       return res.status(400).json({ error: 'Email is required' });
     }
 
-    const otp = generateOTP();
-    const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+    console.log('Sending OTP via Supabase to:', email);
 
-    await db.collection('otp_codes').insertOne({
-      email,
-      otp,
-      createdAt: new Date(),
-      expiresAt,
-      used: false,
+    // Use Supabase to send OTP email
+    const { data, error } = await supabase.auth.signInWithOtp({
+      email: email,
+      options: {
+        emailRedirectTo: `${process.env.FRONTEND_URL}/verify`
+      }
     });
 
+    if (error) {
+      console.error('Supabase OTP error:', error);
+      return res.status(500).json({
+        error: 'Failed to send verification code. Please try again.',
+        details: process.env.NODE_ENV === 'development' ? error.message : undefined
+      });
+    }
+
+    console.log('OTP sent successfully via Supabase');
+
+    // Store user in your database
     await db.collection('users').updateOne(
       { email },
       {
@@ -75,44 +92,11 @@ app.post('/api/auth/send-otp', async (req, res) => {
       { upsert: true }
     );
 
-    try {
-      console.log('Sending OTP email to:', email);
-      console.log('OTP Code:', otp);
-      
-      const emailResult = await resend.emails.send({
-        from: 'onboarding@resend.dev',
-        to: [email],
-        subject: 'Your Pingly Verification Code',
-        html: `
-          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-            <h2 style="color: #000;">Welcome to Pingly!</h2>
-            <p>Your verification code is:</p>
-            <div style="background: #f5f5f5; padding: 20px; border-radius: 8px; text-align: center; margin: 20px 0;">
-              <h1 style="margin: 0; font-size: 32px; letter-spacing: 8px;">${otp}</h1>
-            </div>
-            <p style="color: #666;">This code will expire in 10 minutes.</p>
-            <p style="color: #666;">If you didn't request this code, you can safely ignore this email.</p>
-          </div>
-        `,
-        text: `Your Pingly verification code is: ${otp}. This code will expire in 10 minutes.`,
-      });
-
-      console.log('Email sent successfully:', emailResult);
-      
-      res.json({
-        success: true,
-        message: 'Verification code sent to your email'
-      });
-    } catch (emailError) {
-      console.error('Email error details:', emailError);
-      console.error('Resend API Key exists:', !!process.env.RESEND_API_KEY);
-      console.error('Resend API Key length:', process.env.RESEND_API_KEY?.length);
-      
-      res.status(500).json({
-        error: 'Failed to send email. Please check your email address and try again.',
-        details: process.env.NODE_ENV === 'development' ? emailError.message : undefined
-      });
-    }
+    res.json({
+      success: true,
+      message: 'Verification code sent to your email',
+      provider: 'supabase'
+    });
   } catch (error) {
     console.error('OTP error:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -121,42 +105,52 @@ app.post('/api/auth/send-otp', async (req, res) => {
 
 app.post('/api/auth/verify-otp', async (req, res) => {
   try {
-    const { email, otp } = req.body;
+    const { email, token } = req.body;
 
-    if (!email || !otp) {
-      return res.status(400).json({ error: 'Email and OTP are required' });
+    if (!email || !token) {
+      return res.status(400).json({ error: 'Email and token are required' });
     }
 
-    const otpRecord = await db.collection('otp_codes').findOne({
+    console.log('Verifying OTP with Supabase for:', email);
+
+    // Verify the OTP token with Supabase
+    const { data, error } = await supabase.auth.verifyOtp({
       email,
-      otp,
-      used: false,
-      expiresAt: { $gt: new Date() }
+      token,
+      type: 'email'
     });
 
-    if (!otpRecord) {
+    if (error) {
+      console.error('Supabase verification error:', error);
       return res.status(401).json({ error: 'Invalid or expired code' });
     }
 
-    await db.collection('otp_codes').updateOne(
-      { _id: otpRecord._id },
-      { $set: { used: true, usedAt: new Date() } }
-    );
+    console.log('OTP verified successfully via Supabase');
 
+    // Get or create user in your database
     const user = await db.collection('users').findOne({ email });
+    
+    if (!user) {
+      await db.collection('users').insertOne({
+        email,
+        createdAt: new Date(),
+        authProvider: 'email'
+      });
+    }
 
-    const token = jwt.sign(
-      { email, userId: user._id },
+    // Create your own JWT token
+    const jwtToken = jwt.sign(
+      { email, userId: user?._id || 'new-user' },
       JWT_SECRET,
       { expiresIn: '30d' }
     );
 
     res.json({
       success: true,
-      token,
+      token: jwtToken,
       user: {
-        email: user.email,
-        createdAt: user.createdAt,
+        email: email,
+        createdAt: user?.createdAt || new Date(),
       }
     });
   } catch (error) {
@@ -251,8 +245,8 @@ app.get('/api/', (req, res) => {
   res.json({ message: 'Pingly API' });
 });
 
-// Test endpoint for email functionality
-app.post('/api/test-email', async (req, res) => {
+// Test endpoint for Supabase OTP
+app.post('/api/test-otp', async (req, res) => {
   try {
     const { email } = req.body;
     
@@ -260,22 +254,29 @@ app.post('/api/test-email', async (req, res) => {
       return res.status(400).json({ error: 'Email is required' });
     }
 
-    const testResult = await resend.emails.send({
-      from: 'onboarding@resend.dev',
-      to: [email],
-      subject: 'Test Email from Pingly',
-      html: '<h1>Test Email</h1><p>If you receive this, email is working!</p>',
+    const { data, error } = await supabase.auth.signInWithOtp({
+      email: email,
+      options: {
+        emailRedirectTo: `${process.env.FRONTEND_URL}/verify`
+      }
     });
+
+    if (error) {
+      return res.status(500).json({
+        error: 'Failed to send test OTP',
+        details: error.message
+      });
+    }
 
     res.json({
       success: true,
-      message: 'Test email sent successfully',
-      result: testResult
+      message: 'Test OTP sent successfully via Supabase',
+      data: data
     });
   } catch (error) {
-    console.error('Test email error:', error);
+    console.error('Test OTP error:', error);
     res.status(500).json({
-      error: 'Failed to send test email',
+      error: 'Failed to send test OTP',
       details: error.message
     });
   }

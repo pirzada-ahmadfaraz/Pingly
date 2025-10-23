@@ -63,7 +63,7 @@ const Signup = () => {
       const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/auth/verify-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, otp }),
+        body: JSON.stringify({ email, token: otp }),
       });
 
       const data = await response.json();
@@ -139,7 +139,7 @@ const Signup = () => {
           </div>
           <h1 className="text-3xl font-bold mb-2">Welcome back</h1>
           <p className="text-gray-400 text-base">
-            {step === 'email' ? 'Sign in to your account or create a new one' : 'Enter the 6-digit code sent to your email'}
+            {step === 'email' ? 'Sign in to your account or create a new one' : 'Enter the verification code sent to your email'}
           </p>
         </div>
 
@@ -205,17 +205,16 @@ const Signup = () => {
           <form onSubmit={handleVerifyOTP} className="mb-5">
             <input
               type="text"
-              placeholder="000000"
+              placeholder="Enter verification code"
               value={otp}
-              onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
-              className="w-full px-4 py-3 mb-3 bg-transparent border border-white/20 rounded-lg text-white placeholder:text-gray-500 focus:outline-none focus:border-white/40 transition-colors text-center text-2xl tracking-widest"
+              onChange={(e) => setOtp(e.target.value)}
+              className="w-full px-4 py-3 mb-3 bg-transparent border border-white/20 rounded-lg text-white placeholder:text-gray-500 focus:outline-none focus:border-white/40 transition-colors text-center"
               required
               disabled={loading}
-              maxLength={6}
             />
             <Button
               type="submit"
-              disabled={loading || otp.length !== 6}
+              disabled={loading || !otp.trim()}
               className="w-full bg-white hover:bg-gray-200 text-black text-base py-5 rounded-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed mb-3"
             >
               {loading ? 'Verifying...' : 'Verify Code'}
