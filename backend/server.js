@@ -76,9 +76,12 @@ app.post('/api/auth/send-otp', async (req, res) => {
     );
 
     try {
-      await resend.emails.send({
+      console.log('Sending OTP email to:', email);
+      console.log('OTP Code:', otp);
+      
+      const emailResult = await resend.emails.send({
         from: 'Pingly <onboarding@resend.dev>',
-        to: email,
+        to: [email],
         subject: 'Your Pingly Verification Code',
         html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
@@ -91,16 +94,23 @@ app.post('/api/auth/send-otp', async (req, res) => {
             <p style="color: #666;">If you didn't request this code, you can safely ignore this email.</p>
           </div>
         `,
+        text: `Your Pingly verification code is: ${otp}. This code will expire in 10 minutes.`,
       });
 
+      console.log('Email sent successfully:', emailResult);
+      
       res.json({
         success: true,
         message: 'Verification code sent to your email'
       });
     } catch (emailError) {
-      console.error('Email error:', emailError);
+      console.error('Email error details:', emailError);
+      console.error('Resend API Key exists:', !!process.env.RESEND_API_KEY);
+      console.error('Resend API Key length:', process.env.RESEND_API_KEY?.length);
+      
       res.status(500).json({
-        error: 'Failed to send email'
+        error: 'Failed to send email. Please check your email address and try again.',
+        details: process.env.NODE_ENV === 'development' ? emailError.message : undefined
       });
     }
   } catch (error) {
@@ -239,6 +249,37 @@ app.get('/api/auth/me', async (req, res) => {
 
 app.get('/api/', (req, res) => {
   res.json({ message: 'Pingly API' });
+});
+
+// Test endpoint for email functionality
+app.post('/api/test-email', async (req, res) => {
+  try {
+    const { email } = req.body;
+    
+    if (!email) {
+      return res.status(400).json({ error: 'Email is required' });
+    }
+
+    const testResult = await resend.emails.send({
+      from: 'Pingly <onboarding@resend.dev>',
+      to: [email],
+      subject: 'Test Email from Pingly',
+      html: '<h1>Test Email</h1><p>If you receive this, email is working!</p>',
+      text: 'Test Email - If you receive this, email is working!',
+    });
+
+    res.json({
+      success: true,
+      message: 'Test email sent successfully',
+      result: testResult
+    });
+  } catch (error) {
+    console.error('Test email error:', error);
+    res.status(500).json({
+      error: 'Failed to send test email',
+      details: error.message
+    });
+  }
 });
 
 app.post('/api/status', async (req, res) => {
