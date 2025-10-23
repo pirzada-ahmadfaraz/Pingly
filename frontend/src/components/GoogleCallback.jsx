@@ -12,10 +12,12 @@ const GoogleCallback = () => {
 
       if (error) {
         // Send error to parent window
-        window.opener?.postMessage({
-          type: 'GOOGLE_AUTH_ERROR',
-          error: 'Authentication failed'
-        }, window.location.origin);
+        if (window.opener) {
+          window.opener.postMessage({
+            type: 'GOOGLE_AUTH_ERROR',
+            error: 'Authentication failed'
+          }, window.location.origin);
+        }
         window.close();
         return;
       }
@@ -33,25 +35,31 @@ const GoogleCallback = () => {
 
           if (response.ok) {
             // Send success to parent window
-            window.opener?.postMessage({
-              type: 'GOOGLE_AUTH_SUCCESS',
-              credential: data.credential
-            }, window.location.origin);
+            if (window.opener) {
+              window.opener.postMessage({
+                type: 'GOOGLE_AUTH_SUCCESS',
+                credential: data.credential
+              }, window.location.origin);
+            }
             window.close();
           } else {
             // Send error to parent window
-            window.opener?.postMessage({
-              type: 'GOOGLE_AUTH_ERROR',
-              error: data.error || 'Authentication failed'
-            }, window.location.origin);
+            if (window.opener) {
+              window.opener.postMessage({
+                type: 'GOOGLE_AUTH_ERROR',
+                error: data.error || 'Authentication failed'
+              }, window.location.origin);
+            }
             window.close();
           }
         } catch (err) {
           // Send error to parent window
-          window.opener?.postMessage({
-            type: 'GOOGLE_AUTH_ERROR',
-            error: 'Network error'
-          }, window.location.origin);
+          if (window.opener) {
+            window.opener.postMessage({
+              type: 'GOOGLE_AUTH_ERROR',
+              error: 'Network error'
+            }, window.location.origin);
+          }
           window.close();
         }
       }

@@ -106,31 +106,28 @@ const Signup = () => {
       'width=500,height=600,scrollbars=yes,resizable=yes,top=100,left=100'
     );
     
-    // Listen for popup close
-    const checkClosed = setInterval(() => {
-      if (popup.closed) {
-        clearInterval(checkClosed);
-        setLoading(false);
-      }
-    }, 1000);
-    
     // Listen for messages from popup
     const messageListener = (event) => {
       if (event.origin !== window.location.origin) return;
       
       if (event.data.type === 'GOOGLE_AUTH_SUCCESS') {
         handleGoogleCallback({ credential: event.data.credential });
-        popup.close();
+        popup?.close();
         window.removeEventListener('message', messageListener);
       } else if (event.data.type === 'GOOGLE_AUTH_ERROR') {
         setError(event.data.error || 'Google authentication failed');
         setLoading(false);
-        popup.close();
+        popup?.close();
         window.removeEventListener('message', messageListener);
       }
     };
     
     window.addEventListener('message', messageListener);
+    
+    // Fallback: reset loading state after 30 seconds
+    setTimeout(() => {
+      setLoading(false);
+    }, 30000);
   };
 
   const handleGoogleCallback = async (response) => {
