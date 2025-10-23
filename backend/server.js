@@ -80,7 +80,7 @@ app.post('/api/auth/send-otp', async (req, res) => {
       console.log('OTP Code:', otp);
       
       const emailResult = await resend.emails.send({
-        from: 'Pingly <onboarding@resend.dev>',
+        from: 'onboarding@resend.dev',
         to: [email],
         subject: 'Your Pingly Verification Code',
         html: `
@@ -261,11 +261,10 @@ app.post('/api/test-email', async (req, res) => {
     }
 
     const testResult = await resend.emails.send({
-      from: 'Pingly <onboarding@resend.dev>',
+      from: 'onboarding@resend.dev',
       to: [email],
       subject: 'Test Email from Pingly',
       html: '<h1>Test Email</h1><p>If you receive this, email is working!</p>',
-      text: 'Test Email - If you receive this, email is working!',
     });
 
     res.json({
