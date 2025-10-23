@@ -1,5 +1,3 @@
-// Mock data for the landing page
-
 export const features = [
   {
     id: 1,
@@ -79,15 +77,15 @@ export const additionalFeatures = [
 ];
 
 export const notificationChannels = [
-  { id: 1, name: 'Email', icon: 'Mail' },
-  { id: 2, name: 'Telegram', icon: 'Send' },
-  { id: 3, name: 'Discord', icon: 'MessageCircle' },
-  { id: 4, name: 'Slack', icon: 'Hash' },
-  { id: 5, name: 'Teams', icon: 'Users' },
-  { id: 6, name: 'Webhook', icon: 'Webhook' },
-  { id: 7, name: 'Google Chat', icon: 'MessageSquare' },
-  { id: 8, name: 'Twilio SMS', icon: 'Smartphone' },
-  { id: 9, name: 'PagerDuty', icon: 'AlertCircle' }
+  { id: 1, name: 'Email', emoji: '📧' },
+  { id: 2, name: 'Telegram', emoji: '📨' },
+  { id: 3, name: 'Discord', emoji: '🎮' },
+  { id: 4, name: 'Slack', emoji: '💬' },
+  { id: 5, name: 'Teams', emoji: '👥' },
+  { id: 6, name: 'Webhook', emoji: '🔗' },
+  { id: 7, name: 'Google Chat', emoji: '💬' },
+  { id: 8, name: 'Twilio SMS', emoji: '📱' },
+  { id: 9, name: 'PagerDuty', emoji: '🔔' }
 ];
 
 export const pricingPlans = [

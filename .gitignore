@@ -30,8 +30,13 @@ next-env.d.ts
 dist/
 dist
 
-# Environment files (comprehensive coverage)
-
+# Environment files
+.env
+.env.local
+.env.development
+.env.production
+backend/.env
+frontend/.env
 *token.json*
 *credentials.json*
 
@@ -57,6 +62,7 @@ chainlit.md
 .chainlit
 .ipynb_checkpoints/
 .ac
+.claude/
 
 # Deployment
 .vercel
