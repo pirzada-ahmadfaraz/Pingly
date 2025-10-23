@@ -87,8 +87,21 @@ const Signup = () => {
     setError('');
     
     // Create a popup window for Google OAuth
+    const redirectUri = `${window.location.origin}/auth/google/callback`;
+    const googleAuthUrl = `https://accounts.google.com/oauth/authorize?` +
+      `client_id=${process.env.REACT_APP_GOOGLE_CLIENT_ID}&` +
+      `response_type=code&` +
+      `scope=openid%20email%20profile&` +
+      `redirect_uri=${encodeURIComponent(redirectUri)}&` +
+      `access_type=offline&` +
+      `prompt=select_account`;
+    
+    console.log('Google Auth URL:', googleAuthUrl);
+    console.log('Redirect URI:', redirectUri);
+    console.log('Client ID:', process.env.REACT_APP_GOOGLE_CLIENT_ID);
+    
     const popup = window.open(
-      `https://accounts.google.com/oauth/authorize?client_id=${process.env.REACT_APP_GOOGLE_CLIENT_ID}&response_type=code&scope=openid%20email%20profile&redirect_uri=${encodeURIComponent(window.location.origin + '/auth/google/callback')}&access_type=offline&prompt=select_account`,
+      googleAuthUrl,
       'googleAuth',
       'width=500,height=600,scrollbars=yes,resizable=yes,top=100,left=100'
     );
