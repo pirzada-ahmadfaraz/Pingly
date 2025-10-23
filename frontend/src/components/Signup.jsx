@@ -86,20 +86,38 @@ const Signup = () => {
     setLoading(true);
     setError('');
     
-    if (window.google) {
-      window.google.accounts.id.initialize({
-        client_id: process.env.REACT_APP_GOOGLE_CLIENT_ID,
-        callback: handleGoogleCallback,
-        auto_select: false,
-        cancel_on_tap_outside: true,
-      });
+    // Create a popup window for Google OAuth
+    const popup = window.open(
+      `https://accounts.google.com/oauth/authorize?client_id=${process.env.REACT_APP_GOOGLE_CLIENT_ID}&response_type=code&scope=openid%20email%20profile&redirect_uri=${encodeURIComponent(window.location.origin + '/auth/google/callback')}&access_type=offline&prompt=select_account`,
+      'googleAuth',
+      'width=500,height=600,scrollbars=yes,resizable=yes,top=100,left=100'
+    );
+    
+    // Listen for popup close
+    const checkClosed = setInterval(() => {
+      if (popup.closed) {
+        clearInterval(checkClosed);
+        setLoading(false);
+      }
+    }, 1000);
+    
+    // Listen for messages from popup
+    const messageListener = (event) => {
+      if (event.origin !== window.location.origin) return;
       
-      // Use prompt which should show account selection
-      window.google.accounts.id.prompt();
-    } else {
-      setError('Google Sign-In not loaded. Please refresh the page.');
-      setLoading(false);
-    }
+      if (event.data.type === 'GOOGLE_AUTH_SUCCESS') {
+        handleGoogleCallback({ credential: event.data.credential });
+        popup.close();
+        window.removeEventListener('message', messageListener);
+      } else if (event.data.type === 'GOOGLE_AUTH_ERROR') {
+        setError(event.data.error || 'Google authentication failed');
+        setLoading(false);
+        popup.close();
+        window.removeEventListener('message', messageListener);
+      }
+    };
+    
+    window.addEventListener('message', messageListener);
   };
 
   const handleGoogleCallback = async (response) => {

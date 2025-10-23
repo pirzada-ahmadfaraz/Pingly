@@ -159,6 +159,67 @@ app.post('/api/auth/verify-otp', async (req, res) => {
   }
 });
 
+// OAuth2 flow endpoint for popup authentication
+app.post('/api/auth/google-oauth', async (req, res) => {
+  try {
+    const { code } = req.body;
+
+    if (!code) {
+      return res.status(400).json({ error: 'Authorization code is required' });
+    }
+
+    // Exchange code for tokens
+    const { tokens } = await googleClient.getToken({
+      code: code,
+      redirect_uri: `${process.env.FRONTEND_URL}/auth/google/callback`
+    });
+
+    googleClient.setCredentials(tokens);
+
+    // Get user info
+    const ticket = await googleClient.verifyIdToken({
+      idToken: tokens.id_token,
+      audience: process.env.GOOGLE_CLIENT_ID,
+    });
+
+    const payload = ticket.getPayload();
+    const { email, name, picture } = payload;
+
+    await db.collection('users').updateOne(
+      { email },
+      {
+        $set: { email, name, picture, updatedAt: new Date() },
+        $setOnInsert: { createdAt: new Date(), authProvider: 'google' }
+      },
+      { upsert: true }
+    );
+
+    const user = await db.collection('users').findOne({ email });
+
+    const token = jwt.sign(
+      { email, userId: user._id },
+      JWT_SECRET,
+      { expiresIn: '30d' }
+    );
+
+    res.json({
+      success: true,
+      token,
+      credential: tokens.id_token, // For compatibility with existing frontend
+      user: {
+        email: user.email,
+        name: user.name,
+        picture: user.picture,
+        createdAt: user.createdAt,
+      }
+    });
+  } catch (error) {
+    console.error('Google OAuth error:', error);
+    res.status(500).json({ error: 'Authentication failed' });
+  }
+});
+
+// Keep the original endpoint for backward compatibility
 app.post('/api/auth/google', async (req, res) => {
   try {
     const { credential } = req.body;
