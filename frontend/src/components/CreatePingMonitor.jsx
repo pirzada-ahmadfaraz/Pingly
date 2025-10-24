@@ -106,79 +106,79 @@ const CreatePingMonitor = () => {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 ml-56 p-8">
+      <main className="flex-1 ml-56 p-5">
         {/* Breadcrumb */}
-        <div className="flex items-center gap-2 text-sm text-gray-400 mb-6">
+        <div className="flex items-center gap-2 text-xs text-gray-400 mb-3">
           <button
             onClick={() => navigate('/dashboard')}
             className="hover:text-white transition-colors"
           >
             monitors
           </button>
-          <ChevronRight size={16} />
+          <ChevronRight size={14} />
           <span className="text-white">ping monitor</span>
         </div>
 
         {/* Page Title */}
-        <h1 className="text-3xl font-bold mb-8">Create Ping Monitor</h1>
+        <h1 className="text-2xl font-bold mb-4">Create Ping Monitor</h1>
 
         {/* Form Container */}
         <div className="max-w-6xl">
           {/* Your Monitor Section */}
-          <div className="bg-[#0f0f0f] border border-white/10 rounded-lg p-8 mb-6">
-            <h2 className="text-xl font-bold mb-2">Your Monitor</h2>
-            <p className="text-gray-400 text-sm mb-6">Information we need to start monitoring your server.</p>
+          <div className="bg-[#0f0f0f] border border-white/10 rounded-lg p-5 mb-4">
+            <h2 className="text-base font-bold mb-1">Your Monitor</h2>
+            <p className="text-gray-400 text-xs mb-4">Information we need to start monitoring your server.</p>
 
-            <div className="grid grid-cols-2 gap-6">
+            <div className="grid grid-cols-2 gap-4">
               {/* Name Field */}
               <div>
-                <label className="block text-white font-medium mb-2">Name</label>
+                <label className="block text-white text-sm font-medium mb-1.5">Name</label>
                 <input
                   type="text"
                   placeholder="monitor name"
                   value={formData.name}
                   onChange={(e) => handleInputChange('name', e.target.value)}
-                  className="w-full bg-[#1a1a1a] border border-white/10 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-green-500/50"
+                  className="w-full bg-[#1a1a1a] border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-green-500/50"
                 />
-                <p className="text-gray-400 text-xs mt-2">Name of your monitor</p>
+                <p className="text-gray-400 text-xs mt-1">Name of your monitor</p>
               </div>
 
               {/* IP Address Field */}
               <div>
-                <label className="block text-white font-medium mb-2">IP Address</label>
+                <label className="block text-white text-sm font-medium mb-1.5">IP Address</label>
                 <input
                   type="text"
                   placeholder="192.168.1.1"
                   value={formData.ipAddress}
                   onChange={(e) => handleInputChange('ipAddress', e.target.value)}
-                  className="w-full bg-[#1a1a1a] border border-white/10 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-green-500/50"
+                  className="w-full bg-[#1a1a1a] border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-green-500/50"
                 />
-                <p className="text-gray-400 text-xs mt-2">IP address or hostname to monitor</p>
+                <p className="text-gray-400 text-xs mt-1">IP address or hostname to monitor</p>
               </div>
             </div>
 
             {/* Frequency Section */}
-            <div className="mt-8">
-              <div className="flex items-center justify-between mb-4">
-                <label className="block text-white font-medium">Frequency</label>
-                <div className="flex items-center gap-2 text-xs text-gray-400">
-                  <Lock size={14} />
+            <div className="mt-5">
+              <div className="flex items-center justify-between mb-2">
+                <label className="block text-white text-sm font-medium">Frequency</label>
+                <div className="flex items-center gap-1.5 text-xs text-gray-400">
+                  <Lock size={12} />
                   <span>1 min freq available in paid plans</span>
                   <a href="#" className="text-green-500 hover:text-green-400">Upgrade now</a>
                 </div>
               </div>
 
-              <div className="flex gap-4 mb-2">
+              <div className="flex gap-3 mb-1">
                 <button
                   onClick={() => handleInputChange('frequency', '1min')}
                   disabled
-                  className="px-8 py-3 rounded-lg bg-[#1a1a1a] border border-white/10 text-gray-500 cursor-not-allowed"
+                  className="px-6 py-2 text-sm rounded-lg bg-[#1a1a1a] border border-white/10 text-gray-500 cursor-not-allowed"
                 >
                   1 Min
                 </button>
                 <button
                   onClick={() => handleInputChange('frequency', '5min')}
-                  className={`px-8 py-3 rounded-lg border transition-colors ${
+                  className={`px-6 py-2 text-sm rounded-lg border transition-colors ${
                     formData.frequency === '5min'
                       ? 'bg-green-500/10 border-green-500 text-white'
                       : 'bg-[#1a1a1a] border-white/10 text-gray-400 hover:border-green-500/50'
@@ -188,7 +188,7 @@ const CreatePingMonitor = () => {
                 </button>
                 <button
                   onClick={() => handleInputChange('frequency', '10min')}
-                  className={`px-8 py-3 rounded-lg border transition-colors ${
+                  className={`px-6 py-2 text-sm rounded-lg border transition-colors ${
                     formData.frequency === '10min'
                       ? 'bg-green-500/10 border-green-500 text-white'
                       : 'bg-[#1a1a1a] border-white/10 text-gray-400 hover:border-green-500/50'
@@ -197,23 +197,23 @@ const CreatePingMonitor = () => {
                   10 min
                 </button>
               </div>
-              <p className="text-gray-400 text-xs mt-2">Frequency for checking server availability</p>
+              <p className="text-gray-400 text-xs mt-1">Frequency for checking server availability</p>
             </div>
 
             {/* Monitor Location Section */}
-            <div className="mt-8">
-              <div className="flex items-center justify-between mb-4">
-                <label className="block text-white font-medium">Monitor Location</label>
-                <div className="flex items-center gap-2 text-xs text-gray-400">
-                  <Lock size={14} />
+            <div className="mt-5">
+              <div className="flex items-center justify-between mb-2">
+                <label className="block text-white text-sm font-medium">Monitor Location</label>
+                <div className="flex items-center gap-1.5 text-xs text-gray-400">
+                  <Lock size={12} />
                   <span>Multi location checks available in paid plans</span>
                   <a href="#" className="text-green-500 hover:text-green-400">Upgrade now</a>
                 </div>
               </div>
 
-              <p className="text-gray-400 text-sm mb-4">Select the locations from which you want to check the monitor</p>
+              <p className="text-gray-400 text-xs mb-3">Select the locations from which you want to check the monitor</p>
 
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-3 gap-3">
                 {[
                   { id: 'north-america-west', label: 'North America (West)', disabled: false },
                   { id: 'north-america-east', label: 'North America (East)', disabled: false },
@@ -224,7 +224,7 @@ const CreatePingMonitor = () => {
                 ].map((location) => (
                   <label
                     key={location.id}
-                    className={`flex items-center gap-3 px-4 py-3 rounded-lg border transition-colors cursor-pointer ${
+                    className={`flex items-center gap-2 px-3 py-2 rounded-lg border transition-colors cursor-pointer ${
                       formData.locations.includes(location.id)
                         ? 'bg-green-500/10 border-green-500'
                         : 'bg-[#1a1a1a] border-white/10 hover:border-green-500/50'
@@ -236,18 +236,18 @@ const CreatePingMonitor = () => {
                       onChange={() => toggleLocation(location.id)}
                       className="hidden"
                     />
-                    <div className={`w-5 h-5 rounded border-2 flex items-center justify-center ${
+                    <div className={`w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0 ${
                       formData.locations.includes(location.id)
                         ? 'bg-green-500 border-green-500'
                         : 'border-gray-500'
                     }`}>
                       {formData.locations.includes(location.id) && (
-                        <svg className="w-3 h-3 text-white" viewBox="0 0 12 12" fill="none">
+                        <svg className="w-2.5 h-2.5 text-white" viewBox="0 0 12 12" fill="none">
                           <path d="M10 3L4.5 8.5L2 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                         </svg>
                       )}
                     </div>
-                    <span className="text-sm text-white">{location.label}</span>
+                    <span className="text-xs text-white">{location.label}</span>
                   </label>
                 ))}
               </div>
@@ -255,31 +255,31 @@ const CreatePingMonitor = () => {
           </div>
 
           {/* Notification Settings Section */}
-          <div className="bg-[#0f0f0f] border border-white/10 rounded-lg p-8 mb-6">
-            <h2 className="text-xl font-bold mb-2">Notification Settings</h2>
-            <p className="text-gray-400 text-sm mb-6">Configure how you want to be notified.</p>
+          <div className="bg-[#0f0f0f] border border-white/10 rounded-lg p-5 mb-4">
+            <h2 className="text-base font-bold mb-1">Notification Settings</h2>
+            <p className="text-gray-400 text-xs mb-3">Configure how you want to be notified.</p>
 
             <div>
-              <label className="block text-white font-medium mb-4">Notify on Failure</label>
-              <label className="flex items-center gap-3 px-4 py-3 rounded-lg border bg-green-500/10 border-green-500 w-fit cursor-pointer">
+              <label className="block text-white text-sm font-medium mb-2">Notify on Failure</label>
+              <label className="flex items-center gap-2 px-3 py-2 rounded-lg border bg-green-500/10 border-green-500 w-fit cursor-pointer">
                 <input
                   type="checkbox"
                   checked={formData.notifyOnFailure}
                   onChange={(e) => handleInputChange('notifyOnFailure', e.target.checked)}
                   className="hidden"
                 />
-                <div className={`w-5 h-5 rounded border-2 flex items-center justify-center ${
+                <div className={`w-4 h-4 rounded border-2 flex items-center justify-center ${
                   formData.notifyOnFailure
                     ? 'bg-green-500 border-green-500'
                     : 'border-gray-500'
                 }`}>
                   {formData.notifyOnFailure && (
-                    <svg className="w-3 h-3 text-white" viewBox="0 0 12 12" fill="none">
+                    <svg className="w-2.5 h-2.5 text-white" viewBox="0 0 12 12" fill="none">
                       <path d="M10 3L4.5 8.5L2 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                     </svg>
                   )}
                 </div>
-                <span className="text-sm text-white">Notify via email on failure</span>
+                <span className="text-xs text-white">Notify via email on failure</span>
               </label>
             </div>
           </div>
@@ -288,10 +288,10 @@ const CreatePingMonitor = () => {
           <div className="flex justify-end">
             <button
               onClick={handleSubmit}
-              className="bg-green-500 hover:bg-green-600 text-white font-semibold px-8 py-3 rounded-lg transition-colors flex items-center gap-2"
+              className="bg-green-500 hover:bg-green-600 text-white font-semibold px-6 py-2.5 text-sm rounded-lg transition-colors flex items-center gap-2"
             >
               <span>Start Monitoring</span>
-              <ChevronRight size={20} />
+              <ChevronRight size={18} />
             </button>
           </div>
         </div>
