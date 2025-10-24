@@ -391,6 +391,97 @@ const MonitorDetail = () => {
                 <span className="text-gray-400">{monitor.locations[0] || 'Default location'}</span>
               </div>
             </div>
+
+            {/* Region Response Time Stats */}
+            {checks.length > 0 && (
+              <div className="bg-[#0f0f0f] border border-white/10 rounded-lg p-6 mb-6">
+                <div className="grid grid-cols-4 gap-4 mb-3 text-sm font-medium text-gray-400">
+                  <div>Region</div>
+                  <div>Average Response Time</div>
+                  <div>Minimum Response Time</div>
+                  <div>Last Response Time</div>
+                </div>
+                {monitor.locations.map(location => {
+                  const locationChecks = checks.filter(c => c.location === location && c.responseTime !== null);
+                  const avgResponse = locationChecks.length > 0
+                    ? Math.round(locationChecks.reduce((sum, c) => sum + c.responseTime, 0) / locationChecks.length)
+                    : 0;
+                  const minResponse = locationChecks.length > 0
+                    ? Math.min(...locationChecks.map(c => c.responseTime))
+                    : 0;
+                  const lastResponse = locationChecks.length > 0
+                    ? locationChecks[0].responseTime
+                    : 0;
+
+                  return (
+                    <div key={location} className="grid grid-cols-4 gap-4 py-3 border-t border-white/10">
+                      <div className="text-white capitalize">{location.replace('-', ' ')}</div>
+                      <div className="text-white">{avgResponse} ms</div>
+                      <div className="text-white">{minResponse} ms</div>
+                      <div className="text-white">{lastResponse} ms</div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Recent Incidents */}
+            <div className="bg-[#0f0f0f] border border-white/10 rounded-lg p-6">
+              <h3 className="text-lg font-bold mb-4">Recent Incidents</h3>
+              <div className="grid grid-cols-4 gap-4 mb-3 text-sm font-medium text-gray-400">
+                <div>Status</div>
+                <div>Error</div>
+                <div>Started</div>
+                <div>Duration</div>
+              </div>
+              {(() => {
+                // Find incidents (transitions from up to down)
+                const incidents = [];
+                let currentIncident = null;
+
+                checks.slice().reverse().forEach((check, index, arr) => {
+                  if (check.status === 'down' && !currentIncident) {
+                    currentIncident = {
+                      status: 'down',
+                      error: check.errorMessage || 'Unknown error',
+                      started: check.timestamp,
+                      ended: null
+                    };
+                  } else if (check.status === 'up' && currentIncident) {
+                    currentIncident.ended = check.timestamp;
+                    incidents.push(currentIncident);
+                    currentIncident = null;
+                  }
+                });
+
+                // If there's an ongoing incident
+                if (currentIncident) {
+                  currentIncident.ended = new Date();
+                  incidents.push(currentIncident);
+                }
+
+                return incidents.length > 0 ? (
+                  incidents.slice(0, 5).map((incident, idx) => {
+                    const duration = Math.floor((new Date(incident.ended) - new Date(incident.started)) / 1000 / 60);
+                    return (
+                      <div key={idx} className="grid grid-cols-4 gap-4 py-3 border-t border-white/10">
+                        <div className="flex items-center gap-2">
+                          <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                          <span className="text-white capitalize">{incident.status}</span>
+                        </div>
+                        <div className="text-gray-400 text-sm">{incident.error}</div>
+                        <div className="text-gray-400 text-sm">{formatTime(incident.started)}</div>
+                        <div className="text-gray-400 text-sm">{duration > 0 ? `${duration} min` : '< 1 min'}</div>
+                      </div>
+                    );
+                  })
+                ) : (
+                  <div className="py-12 text-center">
+                    <p className="text-gray-500">You caught up!</p>
+                  </div>
+                );
+              })()}
+            </div>
           </>
         )}
 

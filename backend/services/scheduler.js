@@ -7,19 +7,22 @@ import { checkAllMonitors } from './monitoringService.js';
 export function initializeScheduler(db) {
   console.log('🕐 Initializing monitoring scheduler...');
 
-  // Run every 1 minute to check all monitors
-  // The Monitor.getMonitorsToCheck() function will filter based on frequency
+  // Run every 1 minute to check monitors
+  // The Monitor.getMonitorsToCheck() function filters based on each monitor's frequency
   const task = cron.schedule('* * * * *', async () => {
+    const now = new Date();
+    console.log(`\n⏰ Cron tick at ${now.toLocaleTimeString()}`);
     await checkAllMonitors(db);
   });
 
-  // Optional: Run immediately on startup
+  // Run immediately on startup after 10 seconds
   setTimeout(() => {
-    console.log('Running initial monitor checks...');
+    console.log('\n🚀 Running initial monitor checks...');
     checkAllMonitors(db);
-  }, 5000); // Wait 5 seconds after server start
+  }, 10000);
 
-  console.log('✓ Monitoring scheduler initialized (runs every 1 minute)');
+  console.log('✓ Monitoring scheduler initialized (checks every 1 minute)');
+  console.log('   Monitors will be checked based on their individual frequency settings');
 
   return task;
 }

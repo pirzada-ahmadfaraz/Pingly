@@ -89,7 +89,9 @@ async function checkPingMonitor(monitor) {
  * Check a single monitor and save the result
  */
 export async function checkMonitor(db, monitor) {
-  console.log(`Checking monitor: ${monitor.name} (${monitor.type})`);
+  const startTime = Date.now();
+  console.log(`\n🔎 Checking: ${monitor.name} (${monitor.type})`);
+  console.log(`   URL: ${monitor.url || monitor.ipAddress}`);
 
   let checkResult;
 
@@ -98,7 +100,7 @@ export async function checkMonitor(db, monitor) {
   } else if (monitor.type === 'ping') {
     checkResult = await checkPingMonitor(monitor);
   } else {
-    console.error(`Unknown monitor type: ${monitor.type}`);
+    console.error(`❌ Unknown monitor type: ${monitor.type}`);
     return;
   }
 
@@ -117,7 +119,15 @@ export async function checkMonitor(db, monitor) {
     status: checkResult.status,
   });
 
-  console.log(`✓ Monitor ${monitor.name}: ${checkResult.status} (${checkResult.responseTime}ms)`);
+  const totalTime = Date.now() - startTime;
+  const statusEmoji = checkResult.status === 'up' ? '✅' : '❌';
+  console.log(`${statusEmoji} ${monitor.name}: ${checkResult.status.toUpperCase()}`);
+  console.log(`   Response Time: ${checkResult.responseTime || 'N/A'}ms`);
+  console.log(`   Status Code: ${checkResult.statusCode || 'N/A'}`);
+  if (checkResult.errorMessage) {
+    console.log(`   Error: ${checkResult.errorMessage}`);
+  }
+  console.log(`   Check Duration: ${totalTime}ms`);
 
   return checkResult;
 }
@@ -127,31 +137,42 @@ export async function checkMonitor(db, monitor) {
  */
 export async function checkAllMonitors(db) {
   try {
-    console.log('\n=== Starting Monitor Checks ===');
-    console.log(`Time: ${new Date().toISOString()}`);
+    const now = new Date();
+    console.log(`\n${'='.repeat(60)}`);
+    console.log(`🔍 Monitor Check Cycle Started`);
+    console.log(`⏰ Time: ${now.toLocaleTimeString()}`);
+    console.log(`${'='.repeat(60)}`);
 
     const monitorsToCheck = await Monitor.getMonitorsToCheck(db);
 
     if (monitorsToCheck.length === 0) {
-      console.log('No monitors need checking at this time.');
+      console.log('⏭️  No monitors need checking at this time.');
+      console.log(`${'='.repeat(60)}\n`);
       return;
     }
 
-    console.log(`Found ${monitorsToCheck.length} monitor(s) to check`);
+    console.log(`📊 Found ${monitorsToCheck.length} monitor(s) due for checking:`);
+    monitorsToCheck.forEach(m => {
+      const timeSinceLastCheck = m.lastCheckedAt
+        ? Math.floor((now - m.lastCheckedAt) / 1000 / 60)
+        : 'Never';
+      console.log(`   • ${m.name} (${m.frequency}) - Last checked: ${timeSinceLastCheck === 'Never' ? 'Never' : timeSinceLastCheck + ' min ago'}`);
+    });
 
     // Check all monitors in parallel
     const checkPromises = monitorsToCheck.map(monitor =>
       checkMonitor(db, monitor).catch(error => {
-        console.error(`Error checking monitor ${monitor.name}:`, error);
+        console.error(`❌ Error checking monitor ${monitor.name}:`, error);
       })
     );
 
     await Promise.all(checkPromises);
 
-    console.log('=== Monitor Checks Complete ===\n');
+    console.log(`\n✅ Monitor Check Cycle Complete`);
+    console.log(`${'='.repeat(60)}\n`);
 
   } catch (error) {
-    console.error('Error in checkAllMonitors:', error);
+    console.error('❌ Error in checkAllMonitors:', error);
   }
 }
 
