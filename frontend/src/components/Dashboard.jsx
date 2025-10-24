@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { LayoutGrid, AlertCircle, FileText, Zap, Users, Settings } from 'lucide-react';
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -57,12 +58,12 @@ const Dashboard = () => {
   }
 
   const menuItems = [
-    { id: 'monitors', label: 'Monitors', icon: '📊' },
-    { id: 'incidents', label: 'Incidents', icon: '⚠️' },
-    { id: 'status-pages', label: 'Status Pages', icon: '📄' },
-    { id: 'integrations', label: 'Integrations', icon: '🔗' },
-    { id: 'users', label: 'Users', icon: '👥' },
-    { id: 'settings', label: 'Settings', icon: '⚙️' },
+    { id: 'monitors', label: 'Monitors', icon: LayoutGrid },
+    { id: 'incidents', label: 'Incidents', icon: AlertCircle },
+    { id: 'status-pages', label: 'Status Pages', icon: FileText },
+    { id: 'integrations', label: 'Integrations', icon: Zap },
+    { id: 'users', label: 'Users', icon: Users },
+    { id: 'settings', label: 'Settings', icon: Settings },
   ];
 
   return (
@@ -80,21 +81,24 @@ const Dashboard = () => {
         {/* Menu Items */}
         <nav className="flex-1 p-4">
           <ul className="space-y-1">
-            {menuItems.map((item) => (
-              <li key={item.id}>
-                <button
-                  onClick={() => setActiveTab(item.id)}
-                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors text-left ${
-                    activeTab === item.id
-                      ? 'bg-green-500/10 text-green-500'
-                      : 'text-gray-400 hover:bg-white/5 hover:text-white'
-                  }`}
-                >
-                  <span className="text-lg">{item.icon}</span>
-                  <span className="text-sm font-medium">{item.label}</span>
-                </button>
-              </li>
-            ))}
+            {menuItems.map((item) => {
+              const Icon = item.icon;
+              return (
+                <li key={item.id}>
+                  <button
+                    onClick={() => setActiveTab(item.id)}
+                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors text-left ${
+                      activeTab === item.id
+                        ? 'bg-green-500/10 text-green-500'
+                        : 'text-gray-400 hover:bg-white/5 hover:text-white'
+                    }`}
+                  >
+                    <Icon size={20} />
+                    <span className="text-sm font-medium">{item.label}</span>
+                  </button>
+                </li>
+              );
+            })}
           </ul>
         </nav>
 
@@ -114,7 +118,7 @@ const Dashboard = () => {
               className="text-gray-400 hover:text-red-500 transition-colors text-xs"
               title="Logout"
             >
-              🚪
+              Logout
             </button>
           </div>
         </div>
@@ -136,10 +140,8 @@ const Dashboard = () => {
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full bg-[#1a1a1a] border border-white/10 rounded-lg px-4 py-3 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-green-500/50"
               />
-              <span className="absolute right-4 top-3.5 text-gray-500">🔍</span>
             </div>
             <button className="px-6 py-3 bg-[#1a1a1a] border border-white/10 rounded-lg hover:bg-white/5 transition-colors flex items-center gap-2 text-sm">
-              <span>⚡</span>
               <span>Filter</span>
             </button>
           </div>
@@ -160,7 +162,6 @@ const Dashboard = () => {
 
             {/* Empty State */}
             <div className="flex flex-col items-center justify-center py-20">
-              <div className="text-6xl mb-4">🔍</div>
               <p className="text-gray-400 text-lg">Nothing to see here</p>
             </div>
           </div>
@@ -186,7 +187,6 @@ const Dashboard = () => {
         <aside className="w-80 bg-[#0f0f0f] border-l border-white/10 p-6">
           {/* New Monitor Button */}
           <button className="w-full bg-green-500 hover:bg-green-600 text-white font-semibold py-3 px-4 rounded-lg transition-colors flex items-center justify-center gap-2 mb-8">
-            <span>▼</span>
             <span>New Monitor</span>
           </button>
 
