@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { LayoutGrid, AlertCircle, FileText, Zap, Users, Settings } from 'lucide-react';
+import { LayoutGrid, AlertCircle, FileText, Zap, Users, Settings, Globe, Radio, ChevronDown } from 'lucide-react';
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -8,6 +8,8 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('monitors');
   const [searchQuery, setSearchQuery] = useState('');
+  const [showMonitorDropdown, setShowMonitorDropdown] = useState(false);
+  const dropdownRef = useRef(null);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -43,10 +45,30 @@ const Dashboard = () => {
     checkAuth();
   }, [navigate]);
 
+  // Handle click outside dropdown
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setShowMonitorDropdown(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
   const handleLogout = () => {
     localStorage.removeItem('auth_token');
     localStorage.removeItem('user');
     navigate('/');
+  };
+
+  const handleCreateMonitor = (type) => {
+    // TODO: Navigate to monitor creation page or open modal
+    console.log(`Creating ${type} monitor`);
+    setShowMonitorDropdown(false);
   };
 
   if (loading) {
@@ -185,10 +207,49 @@ const Dashboard = () => {
 
         {/* Right Sidebar */}
         <aside className="w-80 bg-[#0f0f0f] border-l border-white/10 p-6">
-          {/* New Monitor Button */}
-          <button className="w-full bg-green-500 hover:bg-green-600 text-white font-semibold py-3 px-4 rounded-lg transition-colors flex items-center justify-center gap-2 mb-8">
-            <span>New Monitor</span>
-          </button>
+          {/* New Monitor Dropdown */}
+          <div className="relative mb-8" ref={dropdownRef}>
+            <button
+              onClick={() => setShowMonitorDropdown(!showMonitorDropdown)}
+              className="w-full bg-green-500 hover:bg-green-600 text-white font-semibold py-3 px-4 rounded-lg transition-colors flex items-center justify-center gap-2"
+            >
+              <ChevronDown size={20} />
+              <span>New Monitor</span>
+            </button>
+
+            {/* Dropdown Menu */}
+            {showMonitorDropdown && (
+              <div className="absolute top-full left-0 right-0 mt-2 bg-[#1a1a1a] border border-white/10 rounded-lg overflow-hidden shadow-xl z-50">
+                {/* HTTP Monitor Option */}
+                <button
+                  onClick={() => handleCreateMonitor('http')}
+                  className="w-full px-6 py-4 text-left hover:bg-white/5 transition-colors border-b border-white/10"
+                >
+                  <div className="flex items-start gap-3">
+                    <Globe size={24} className="text-green-500 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <h4 className="text-white font-semibold text-base mb-1">HTTP Monitor</h4>
+                      <p className="text-gray-400 text-sm">Monitor websites and API endpoints</p>
+                    </div>
+                  </div>
+                </button>
+
+                {/* Ping Monitor Option */}
+                <button
+                  onClick={() => handleCreateMonitor('ping')}
+                  className="w-full px-6 py-4 text-left hover:bg-white/5 transition-colors"
+                >
+                  <div className="flex items-start gap-3">
+                    <Radio size={24} className="text-green-500 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <h4 className="text-white font-semibold text-base mb-1">Ping Monitor</h4>
+                      <p className="text-gray-400 text-sm">Monitor server availability using IP addresses</p>
+                    </div>
+                  </div>
+                </button>
+              </div>
+            )}
+          </div>
 
           {/* Current Status */}
           <div className="mb-8">
