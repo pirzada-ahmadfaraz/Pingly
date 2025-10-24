@@ -124,14 +124,16 @@ export class Monitor {
     return monitors.filter(monitor => {
       if (!monitor.lastCheckedAt) return true; // Never checked before
 
-      const minutesSinceCheck = (now - monitor.lastCheckedAt) / 1000 / 60;
-      const frequencyMinutes = {
-        '1min': 1,
-        '5min': 5,
-        '10min': 10
-      }[monitor.frequency] || 5;
+      const frequencyMs = {
+        '1min': 60 * 1000,
+        '5min': 5 * 60 * 1000,
+        '10min': 10 * 60 * 1000
+      }[monitor.frequency] || 5 * 60 * 1000;
 
-      return minutesSinceCheck >= frequencyMinutes;
+      const nextCheckTime = new Date(monitor.lastCheckedAt).getTime() + frequencyMs;
+
+      // Check if it's time (within 30 second window to account for cron timing)
+      return now.getTime() >= (nextCheckTime - 30000);
     });
   }
 }

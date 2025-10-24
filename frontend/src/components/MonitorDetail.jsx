@@ -10,6 +10,7 @@ const MonitorDetail = () => {
   const [checks, setChecks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('overview');
+  const [nextCheckIn, setNextCheckIn] = useState('');
 
   const menuItems = [
     { id: 'monitors', label: 'Monitors', icon: LayoutGrid },
@@ -24,14 +25,51 @@ const MonitorDetail = () => {
     fetchMonitorDetails();
     fetchMonitorChecks();
 
-    // Refresh every 30 seconds
+    // Refresh every 10 seconds to get latest data
     const interval = setInterval(() => {
       fetchMonitorDetails();
       fetchMonitorChecks();
-    }, 30000);
+    }, 10000);
 
     return () => clearInterval(interval);
   }, [id]);
+
+  // Countdown timer for next check
+  useEffect(() => {
+    if (!monitor) return;
+
+    const calculateNextCheck = () => {
+      if (!monitor.lastCheckedAt) {
+        setNextCheckIn('Checking soon...');
+        return;
+      }
+
+      const frequencyMs = {
+        '1min': 60 * 1000,
+        '5min': 5 * 60 * 1000,
+        '10min': 10 * 60 * 1000
+      }[monitor.frequency] || 5 * 60 * 1000;
+
+      const lastCheck = new Date(monitor.lastCheckedAt).getTime();
+      const nextCheck = lastCheck + frequencyMs;
+      const now = Date.now();
+      const timeUntilNext = nextCheck - now;
+
+      if (timeUntilNext <= 0) {
+        setNextCheckIn('Checking now...');
+        return;
+      }
+
+      const minutes = Math.floor(timeUntilNext / 60000);
+      const seconds = Math.floor((timeUntilNext % 60000) / 1000);
+      setNextCheckIn(`${minutes}m ${seconds}s`);
+    };
+
+    calculateNextCheck();
+    const timer = setInterval(calculateNextCheck, 1000);
+
+    return () => clearInterval(timer);
+  }, [monitor]);
 
   const fetchMonitorDetails = async () => {
     const token = localStorage.getItem('auth_token');
@@ -326,9 +364,9 @@ const MonitorDetail = () => {
               </div>
 
               <div className="bg-[#0f0f0f] border border-white/10 rounded-lg p-5">
-                <h3 className="text-sm text-gray-400 mb-1">Last Checked at</h3>
+                <h3 className="text-sm text-gray-400 mb-1">Next Check In</h3>
                 <p className="text-xs text-gray-500 mb-2">Checks every {monitor.frequency}</p>
-                <p className="text-2xl font-bold">{getTimeSince(monitor.lastCheckedAt)}</p>
+                <p className="text-2xl font-bold">{nextCheckIn || 'Calculating...'}</p>
               </div>
 
               <div className="bg-[#0f0f0f] border border-white/10 rounded-lg p-5">

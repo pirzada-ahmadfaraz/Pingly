@@ -153,10 +153,23 @@ export async function checkAllMonitors(db) {
 
     console.log(`📊 Found ${monitorsToCheck.length} monitor(s) due for checking:`);
     monitorsToCheck.forEach(m => {
-      const timeSinceLastCheck = m.lastCheckedAt
-        ? Math.floor((now - m.lastCheckedAt) / 1000 / 60)
-        : 'Never';
-      console.log(`   • ${m.name} (${m.frequency}) - Last checked: ${timeSinceLastCheck === 'Never' ? 'Never' : timeSinceLastCheck + ' min ago'}`);
+      if (!m.lastCheckedAt) {
+        console.log(`   • ${m.name} (${m.frequency}) - First check`);
+      } else {
+        const frequencyMs = {
+          '1min': 60 * 1000,
+          '5min': 5 * 60 * 1000,
+          '10min': 10 * 60 * 1000
+        }[m.frequency] || 5 * 60 * 1000;
+
+        const lastCheckTime = new Date(m.lastCheckedAt);
+        const nextCheckTime = new Date(lastCheckTime.getTime() + frequencyMs);
+        const timeOverdue = Math.floor((now - nextCheckTime) / 1000);
+
+        console.log(`   • ${m.name} (${m.frequency})`);
+        console.log(`     Last: ${lastCheckTime.toLocaleTimeString()}`);
+        console.log(`     Due: ${nextCheckTime.toLocaleTimeString()} ${timeOverdue > 0 ? `(${timeOverdue}s overdue)` : ''}`);
+      }
     });
 
     // Check all monitors in parallel
