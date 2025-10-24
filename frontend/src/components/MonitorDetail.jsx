@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { LayoutGrid, AlertCircle, FileText, Zap, Users, Settings, ChevronRight, Pause, Play } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
@@ -38,11 +38,37 @@ const MonitorDetail = () => {
 
     fetchData();
 
-    // Refresh every 15 seconds to get latest data
-    const interval = setInterval(fetchData, 15000);
+    // Smart refresh: only fetch when we expect new data
+    const smartRefresh = () => {
+      if (!monitor || !monitor.lastCheckedAt) {
+        // If no monitor data yet, check every 30 seconds
+        return 30000;
+      }
+
+      const frequencyMs = {
+        '1min': 60 * 1000,
+        '5min': 5 * 60 * 1000,
+        '10min': 10 * 60 * 1000
+      }[monitor.frequency] || 5 * 60 * 1000;
+
+      const lastCheck = new Date(monitor.lastCheckedAt).getTime();
+      const nextExpectedCheck = lastCheck + frequencyMs;
+      const now = Date.now();
+      const timeUntilNext = nextExpectedCheck - now;
+
+      // If we're close to the next expected check (within 30 seconds), check more frequently
+      if (timeUntilNext <= 30000 && timeUntilNext > 0) {
+        return 10000; // Check every 10 seconds when close to next check
+      }
+      
+      // Otherwise, check every 2 minutes (less frequent)
+      return 120000;
+    };
+
+    const interval = setInterval(fetchData, smartRefresh());
 
     return () => clearInterval(interval);
-  }, [id]);
+  }, [id, monitor?.frequency, monitor?.lastCheckedAt]);
 
   // Countdown timer for next check
   useEffect(() => {
@@ -200,23 +226,26 @@ const MonitorDetail = () => {
   };
 
   // Prepare chart data (reverse to show chronologically and remove duplicates)
-  const chartData = checks
-    .slice()
-    .reverse()
-    .filter(check => check.responseTime !== null)
-    .reduce((unique, check) => {
-      // Only add if this timestamp doesn't exist yet
-      const timestamp = new Date(check.timestamp).getTime();
-      if (!unique.find(item => item.timestamp === timestamp)) {
-        unique.push({
-          time: formatTime(check.timestamp),
-          responseTime: check.responseTime,
-          status: check.status,
-          timestamp: timestamp
-        });
-      }
-      return unique;
-    }, []);
+  // Memoize chart data to prevent unnecessary re-renders
+  const chartData = useMemo(() => {
+    return checks
+      .slice()
+      .reverse()
+      .filter(check => check.responseTime !== null)
+      .reduce((unique, check) => {
+        // Only add if this timestamp doesn't exist yet
+        const timestamp = new Date(check.timestamp).getTime();
+        if (!unique.find(item => item.timestamp === timestamp)) {
+          unique.push({
+            time: formatTime(check.timestamp),
+            responseTime: check.responseTime,
+            status: check.status,
+            timestamp: timestamp
+          });
+        }
+        return unique;
+      }, []);
+  }, [checks]);
 
   const user = JSON.parse(localStorage.getItem('user') || '{}');
 
