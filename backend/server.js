@@ -7,6 +7,9 @@ import { dirname, join } from 'path';
 import { createClient } from '@supabase/supabase-js';
 import jwt from 'jsonwebtoken';
 import { OAuth2Client } from 'google-auth-library';
+import { createMonitorRoutes } from './routes/monitors.js';
+import { authenticateToken } from './middleware/auth.js';
+import { initializeScheduler, stopScheduler } from './services/scheduler.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -26,6 +29,7 @@ const mongoUrl = process.env.MONGO_URL;
 const dbName = process.env.DB_NAME;
 let db;
 let client;
+let schedulerTask;
 
 const JWT_SECRET = process.env.JWT_SECRET || 'change-this-secret';
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
@@ -306,6 +310,12 @@ app.get('/api/', (req, res) => {
   res.json({ message: 'Pingly API' });
 });
 
+// Monitor routes (protected)
+app.use('/api/monitors', authenticateToken, (req, res, next) => {
+  const monitorRoutes = createMonitorRoutes(db);
+  monitorRoutes(req, res, next);
+});
+
 // Test endpoint for Supabase OTP
 app.post('/api/test-otp', async (req, res) => {
   try {
@@ -382,6 +392,9 @@ app.get('/api/status', async (req, res) => {
 async function startServer() {
   await connectDB();
 
+  // Initialize monitoring scheduler
+  schedulerTask = initializeScheduler(db);
+
   app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
   });
@@ -389,9 +402,15 @@ async function startServer() {
 
 process.on('SIGINT', async () => {
   console.log('\nShutting down...');
+
+  // Stop scheduler
+  stopScheduler(schedulerTask);
+
+  // Close MongoDB connection
   if (client) {
     await client.close();
   }
+
   process.exit(0);
 });
 

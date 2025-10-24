@@ -35,8 +35,43 @@ const CreatePingMonitor = () => {
   };
 
   const handleSubmit = async () => {
-    // TODO: Implement API call to create monitor
-    console.log('Creating ping monitor with data:', formData);
+    const token = localStorage.getItem('auth_token');
+
+    if (!formData.name || !formData.ipAddress) {
+      alert('Please fill in all required fields');
+      return;
+    }
+
+    try {
+      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/monitors`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          name: formData.name,
+          type: 'ping',
+          ipAddress: formData.ipAddress,
+          frequency: formData.frequency,
+          locations: formData.locations,
+          notifyOnFailure: formData.notifyOnFailure,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        console.log('Ping monitor created successfully:', data.monitor);
+        navigate('/dashboard');
+      } else {
+        console.error('Failed to create monitor:', data.error);
+        alert('Failed to create monitor: ' + data.error);
+      }
+    } catch (error) {
+      console.error('Error creating monitor:', error);
+      alert('Error creating monitor. Please try again.');
+    }
   };
 
   const handleLogout = () => {

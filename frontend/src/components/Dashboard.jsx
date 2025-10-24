@@ -9,6 +9,8 @@ const Dashboard = () => {
   const [activeTab, setActiveTab] = useState('monitors');
   const [searchQuery, setSearchQuery] = useState('');
   const [showMonitorDropdown, setShowMonitorDropdown] = useState(false);
+  const [monitors, setMonitors] = useState([]);
+  const [monitorsLoading, setMonitorsLoading] = useState(true);
   const dropdownRef = useRef(null);
 
   useEffect(() => {
@@ -44,6 +46,43 @@ const Dashboard = () => {
 
     checkAuth();
   }, [navigate]);
+
+  // Fetch monitors
+  useEffect(() => {
+    const fetchMonitors = async () => {
+      const token = localStorage.getItem('auth_token');
+
+      if (!token) return;
+
+      try {
+        setMonitorsLoading(true);
+        const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/monitors`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+          setMonitors(data.monitors || []);
+        } else {
+          console.error('Failed to fetch monitors:', data.error);
+        }
+      } catch (error) {
+        console.error('Error fetching monitors:', error);
+      } finally {
+        setMonitorsLoading(false);
+      }
+    };
+
+    if (!loading && user) {
+      fetchMonitors();
+      // Refresh monitors every 30 seconds
+      const interval = setInterval(fetchMonitors, 30000);
+      return () => clearInterval(interval);
+    }
+  }, [loading, user]);
 
   // Handle click outside dropdown
   useEffect(() => {
@@ -181,15 +220,64 @@ const Dashboard = () => {
               </div>
             </div>
 
-            {/* Empty State */}
-            <div className="flex flex-col items-center justify-center py-20">
-              <p className="text-gray-400 text-lg">Nothing to see here</p>
-            </div>
+            {/* Monitors List */}
+            {monitorsLoading ? (
+              <div className="flex flex-col items-center justify-center py-20">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-500 mb-4"></div>
+                <p className="text-gray-400">Loading monitors...</p>
+              </div>
+            ) : monitors.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-20">
+                <p className="text-gray-400 text-lg">Nothing to see here</p>
+                <p className="text-gray-500 text-sm mt-2">Create your first monitor to get started</p>
+              </div>
+            ) : (
+              monitors
+                .filter(monitor =>
+                  monitor.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                  (monitor.url && monitor.url.toLowerCase().includes(searchQuery.toLowerCase())) ||
+                  (monitor.ipAddress && monitor.ipAddress.toLowerCase().includes(searchQuery.toLowerCase()))
+                )
+                .map((monitor) => (
+                  <div
+                    key={monitor._id}
+                    onClick={() => navigate(`/dashboard/monitors/${monitor._id}`)}
+                    className="grid grid-cols-4 gap-4 px-6 py-4 border-b border-white/10 hover:bg-white/5 transition-colors cursor-pointer"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className={`w-3 h-3 rounded-full ${
+                        monitor.lastStatus === 'up' ? 'bg-green-500' :
+                        monitor.lastStatus === 'down' ? 'bg-red-500' :
+                        'bg-gray-400'
+                      }`}></div>
+                      <span className="text-white font-medium">{monitor.name}</span>
+                    </div>
+                    <div className="flex items-center">
+                      <span className="text-gray-400 capitalize">{monitor.type}</span>
+                    </div>
+                    <div className="flex items-center">
+                      <span className="text-gray-400">{monitor.frequency}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className={`${
+                        monitor.lastStatus === 'up' ? 'text-green-500' :
+                        monitor.lastStatus === 'down' ? 'text-red-500' :
+                        'text-gray-400'
+                      } font-medium capitalize`}>
+                        {monitor.lastStatus || 'Pending'}
+                      </span>
+                      {monitor.uptime24h !== undefined && (
+                        <span className="text-xs text-gray-500">{monitor.uptime24h}%</span>
+                      )}
+                    </div>
+                  </div>
+                ))
+            )}
           </div>
 
           {/* Pagination */}
           <div className="flex items-center justify-between mt-6">
-            <p className="text-sm text-gray-400">Showing 0 of 0 rows</p>
+            <p className="text-sm text-gray-400">Showing {monitors.length} of {monitors.length} rows</p>
             <div className="flex gap-2">
               <button className="px-4 py-2 text-sm text-gray-400 hover:text-white transition-colors">
                 Show 10 ▼
@@ -260,7 +348,7 @@ const Dashboard = () => {
                 <span className="w-3 h-3 bg-gray-400 rounded-full"></span>
               </div>
             </div>
-            <p className="text-sm text-gray-400">Using 0 out of 5 Monitors</p>
+            <p className="text-sm text-gray-400">Using {monitors.length} out of 5 Monitors</p>
           </div>
 
           {/* Last 24 Hours */}
@@ -272,23 +360,28 @@ const Dashboard = () => {
                   <p className="text-sm text-gray-400 mb-1">Overall</p>
                   <p className="text-sm text-gray-400">Uptime</p>
                 </div>
-                <div className="text-3xl font-bold">0%</div>
+                <div className="text-3xl font-bold">
+                  {monitors.length > 0
+                    ? (monitors.reduce((sum, m) => sum + (m.uptime24h || 0), 0) / monitors.length).toFixed(1)
+                    : 0}%
+                </div>
               </div>
 
               <div className="flex justify-between items-center">
                 <p className="text-sm text-gray-400">Incidents</p>
-                <p className="text-3xl font-bold">0</p>
+                <p className="text-3xl font-bold">
+                  {monitors.filter(m => m.lastStatus === 'down').length}
+                </p>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <p className="text-sm text-gray-400 mb-1">Without Inc.</p>
-                  <p className="text-2xl font-bold">0d.</p>
+                  <p className="text-sm text-gray-400 mb-1">Active</p>
+                  <p className="text-2xl font-bold">{monitors.filter(m => m.lastStatus === 'up').length}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-gray-400 mb-1">Affected</p>
-                  <p className="text-sm text-gray-400">Mon.</p>
-                  <p className="text-2xl font-bold">0</p>
+                  <p className="text-sm text-gray-400 mb-1">Down</p>
+                  <p className="text-2xl font-bold">{monitors.filter(m => m.lastStatus === 'down').length}</p>
                 </div>
               </div>
             </div>

@@ -35,8 +35,43 @@ const CreateHttpMonitor = () => {
   };
 
   const handleSubmit = async () => {
-    // TODO: Implement API call to create monitor
-    console.log('Creating monitor with data:', formData);
+    const token = localStorage.getItem('auth_token');
+
+    if (!formData.name || !formData.url) {
+      alert('Please fill in all required fields');
+      return;
+    }
+
+    try {
+      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/monitors`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          name: formData.name,
+          type: 'http',
+          url: formData.url,
+          frequency: formData.frequency,
+          locations: formData.locations,
+          notifyOnFailure: formData.notifyOnFailure,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        console.log('Monitor created successfully:', data.monitor);
+        navigate('/dashboard');
+      } else {
+        console.error('Failed to create monitor:', data.error);
+        alert('Failed to create monitor: ' + data.error);
+      }
+    } catch (error) {
+      console.error('Error creating monitor:', error);
+      alert('Error creating monitor. Please try again.');
+    }
   };
 
   const handleLogout = () => {
