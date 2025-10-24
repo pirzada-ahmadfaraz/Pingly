@@ -66,9 +66,8 @@ const Dashboard = () => {
   };
 
   const handleCreateMonitor = (type) => {
-    // TODO: Navigate to monitor creation page or open modal
-    console.log(`Creating ${type} monitor`);
     setShowMonitorDropdown(false);
+    navigate(`/dashboard/monitors/new-monitor/${type}`);
   };
 
   if (loading) {
