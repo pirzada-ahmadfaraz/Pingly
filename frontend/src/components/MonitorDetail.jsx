@@ -22,28 +22,36 @@ const MonitorDetail = () => {
   ];
 
   useEffect(() => {
-    fetchMonitorDetails();
-    fetchMonitorChecks();
+    let isFetching = false;
 
-    // Refresh every 10 seconds to get latest data
-    const interval = setInterval(() => {
-      fetchMonitorDetails();
-      fetchMonitorChecks();
-    }, 10000);
+    const fetchData = async () => {
+      if (isFetching) return; // Prevent overlapping requests
+
+      isFetching = true;
+      try {
+        await fetchMonitorDetails();
+        await fetchMonitorChecks();
+      } finally {
+        isFetching = false;
+      }
+    };
+
+    fetchData();
+
+    // Refresh every 15 seconds to get latest data
+    const interval = setInterval(fetchData, 15000);
 
     return () => clearInterval(interval);
   }, [id]);
 
   // Countdown timer for next check
   useEffect(() => {
-    if (!monitor) return;
+    if (!monitor || !monitor.lastCheckedAt) {
+      setNextCheckIn('Pending...');
+      return;
+    }
 
     const calculateNextCheck = () => {
-      if (!monitor.lastCheckedAt) {
-        setNextCheckIn('Checking soon...');
-        return;
-      }
-
       const frequencyMs = {
         '1min': 60 * 1000,
         '5min': 5 * 60 * 1000,
@@ -55,8 +63,14 @@ const MonitorDetail = () => {
       const now = Date.now();
       const timeUntilNext = nextCheck - now;
 
+      // If past due time, show 0m 0s (will update when new check completes)
+      if (timeUntilNext <= -10000) { // More than 10 seconds overdue
+        setNextCheckIn('0m 0s');
+        return;
+      }
+
       if (timeUntilNext <= 0) {
-        setNextCheckIn('Checking now...');
+        setNextCheckIn('0m 0s');
         return;
       }
 
@@ -69,7 +83,7 @@ const MonitorDetail = () => {
     const timer = setInterval(calculateNextCheck, 1000);
 
     return () => clearInterval(timer);
-  }, [monitor]);
+  }, [monitor, monitor?.lastCheckedAt]);
 
   const fetchMonitorDetails = async () => {
     const token = localStorage.getItem('auth_token');
@@ -185,16 +199,24 @@ const MonitorDetail = () => {
     return `${Math.floor(seconds / 86400)}d ago`;
   };
 
-  // Prepare chart data (reverse to show chronologically)
+  // Prepare chart data (reverse to show chronologically and remove duplicates)
   const chartData = checks
     .slice()
     .reverse()
     .filter(check => check.responseTime !== null)
-    .map(check => ({
-      time: formatTime(check.timestamp),
-      responseTime: check.responseTime,
-      status: check.status
-    }));
+    .reduce((unique, check) => {
+      // Only add if this timestamp doesn't exist yet
+      const timestamp = new Date(check.timestamp).getTime();
+      if (!unique.find(item => item.timestamp === timestamp)) {
+        unique.push({
+          time: formatTime(check.timestamp),
+          responseTime: check.responseTime,
+          status: check.status,
+          timestamp: timestamp
+        });
+      }
+      return unique;
+    }, []);
 
   const user = JSON.parse(localStorage.getItem('user') || '{}');
 

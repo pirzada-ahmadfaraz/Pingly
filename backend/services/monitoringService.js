@@ -104,15 +104,28 @@ export async function checkMonitor(db, monitor) {
     return;
   }
 
-  // Save check result to database
-  await MonitorCheck.create(db, {
-    monitorId: monitor._id,
-    status: checkResult.status,
-    responseTime: checkResult.responseTime,
-    statusCode: checkResult.statusCode,
-    location: monitor.locations[0] || 'default', // Use first location
-    errorMessage: checkResult.errorMessage,
-  });
+  // Check if a check was just saved (prevent duplicates within 10 seconds)
+  const recentCheck = await db.collection('monitor_checks').findOne(
+    {
+      monitorId: monitor._id,
+      timestamp: { $gte: new Date(Date.now() - 10000) }
+    },
+    { sort: { timestamp: -1 } }
+  );
+
+  // Only save if no check exists in the last 10 seconds
+  if (!recentCheck) {
+    await MonitorCheck.create(db, {
+      monitorId: monitor._id,
+      status: checkResult.status,
+      responseTime: checkResult.responseTime,
+      statusCode: checkResult.statusCode,
+      location: monitor.locations[0] || 'default', // Use first location
+      errorMessage: checkResult.errorMessage,
+    });
+  } else {
+    console.log(`   ⚠️  Skipping duplicate check (last check was ${Math.floor((Date.now() - recentCheck.timestamp) / 1000)}s ago)`);
+  }
 
   // Update monitor status
   await Monitor.updateStatus(db, monitor._id, {
