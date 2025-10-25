@@ -566,20 +566,28 @@ app.post('/api/trigger-monitoring', async (req, res) => {
 });
 
 // Vercel Cron endpoint - runs every 5 minutes
+// Cron endpoint - Called by external cron service (cron-job.org)
 app.get('/api/cron/check-monitors', async (req, res) => {
   try {
-    // Verify this is actually from Vercel Cron (optional security)
-    const authHeader = req.headers.authorization;
-    if (process.env.CRON_SECRET && authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+    // Optional: Verify with secret key if set
+    const cronSecret = req.query.secret || req.headers['x-cron-secret'];
+    if (process.env.CRON_SECRET && cronSecret !== process.env.CRON_SECRET) {
+      console.log('❌ Unauthorized cron attempt');
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
+    console.log('🕐 Cron job triggered at', new Date().toISOString());
     const { checkAllMonitors } = await import('./services/monitoringService.js');
     await checkAllMonitors(db);
-    res.json({ success: true, message: 'Cron job executed successfully' });
+
+    res.json({
+      success: true,
+      message: 'Cron job executed successfully',
+      timestamp: new Date().toISOString()
+    });
   } catch (error) {
     console.error('Cron job error:', error);
-    res.status(500).json({ error: 'Cron job failed' });
+    res.status(500).json({ error: 'Cron job failed', details: error.message });
   }
 });
 
@@ -592,7 +600,8 @@ async function startServer() {
 
   app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
-    console.log('✓ Monitoring via Vercel Cron (every 5 minutes)');
+    console.log('✓ Monitoring via external cron service');
+    console.log('✓ Cron endpoint: /api/cron/check-monitors');
   });
 }
 
