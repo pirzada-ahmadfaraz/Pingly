@@ -401,22 +401,39 @@ app.post('/api/trigger-monitoring', async (req, res) => {
   }
 });
 
+// Vercel Cron endpoint - runs every 5 minutes
+app.get('/api/cron/check-monitors', async (req, res) => {
+  try {
+    // Verify this is actually from Vercel Cron (optional security)
+    const authHeader = req.headers.authorization;
+    if (process.env.CRON_SECRET && authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const { checkAllMonitors } = await import('./services/monitoringService.js');
+    await checkAllMonitors(db);
+    res.json({ success: true, message: 'Cron job executed successfully' });
+  } catch (error) {
+    console.error('Cron job error:', error);
+    res.status(500).json({ error: 'Cron job failed' });
+  }
+});
+
 async function startServer() {
   await connectDB();
 
-  // Initialize monitoring scheduler
-  schedulerTask = initializeScheduler(db);
+  // NOTE: Monitoring is handled by Vercel Cron Jobs (see vercel.json)
+  // The in-process node-cron scheduler is disabled for Vercel deployment
+  // schedulerTask = initializeScheduler(db);
 
   app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
+    console.log('✓ Monitoring via Vercel Cron (every 5 minutes)');
   });
 }
 
 process.on('SIGINT', async () => {
   console.log('\nShutting down...');
-
-  // Stop scheduler
-  stopScheduler(schedulerTask);
 
   // Close MongoDB connection
   if (client) {
