@@ -89,10 +89,6 @@ async function checkPingMonitor(monitor) {
  * Check a single monitor and save the result
  */
 export async function checkMonitor(db, monitor) {
-  const startTime = Date.now();
-  console.log(`\n🔎 Checking: ${monitor.name} (${monitor.type})`);
-  console.log(`   URL: ${monitor.url || monitor.ipAddress}`);
-
   let checkResult;
 
   if (monitor.type === 'http') {
@@ -104,43 +100,34 @@ export async function checkMonitor(db, monitor) {
     return;
   }
 
-  // Check if a check was just saved (prevent duplicates within 10 seconds)
+  // Check if a check was just saved (prevent duplicates within 30 seconds)
   const recentCheck = await db.collection('monitor_checks').findOne(
     {
       monitorId: monitor._id,
-      timestamp: { $gte: new Date(Date.now() - 10000) }
+      timestamp: { $gte: new Date(Date.now() - 30000) }
     },
     { sort: { timestamp: -1 } }
   );
 
-  // Only save if no check exists in the last 10 seconds
+  // Only save if no recent check exists
   if (!recentCheck) {
     await MonitorCheck.create(db, {
       monitorId: monitor._id,
       status: checkResult.status,
       responseTime: checkResult.responseTime,
       statusCode: checkResult.statusCode,
-      location: monitor.locations[0] || 'default', // Use first location
+      location: monitor.locations[0] || 'default',
       errorMessage: checkResult.errorMessage,
     });
-  } else {
-    console.log(`   ⚠️  Skipping duplicate check (last check was ${Math.floor((Date.now() - recentCheck.timestamp) / 1000)}s ago)`);
-  }
 
-  // Update monitor status
-  await Monitor.updateStatus(db, monitor._id, {
-    status: checkResult.status,
-  });
+    // Update monitor status
+    await Monitor.updateStatus(db, monitor._id, {
+      status: checkResult.status,
+    });
 
-  const totalTime = Date.now() - startTime;
-  const statusEmoji = checkResult.status === 'up' ? '✅' : '❌';
-  console.log(`${statusEmoji} ${monitor.name}: ${checkResult.status.toUpperCase()}`);
-  console.log(`   Response Time: ${checkResult.responseTime || 'N/A'}ms`);
-  console.log(`   Status Code: ${checkResult.statusCode || 'N/A'}`);
-  if (checkResult.errorMessage) {
-    console.log(`   Error: ${checkResult.errorMessage}`);
+    const emoji = checkResult.status === 'up' ? '✅' : '❌';
+    console.log(`   ${emoji} ${monitor.name} - ${checkResult.responseTime || 'N/A'}ms`);
   }
-  console.log(`   Check Duration: ${totalTime}ms`);
 
   return checkResult;
 }
@@ -150,55 +137,27 @@ export async function checkMonitor(db, monitor) {
  */
 export async function checkAllMonitors(db) {
   try {
-    const now = new Date();
-    console.log(`\n${'='.repeat(60)}`);
-    console.log(`🔍 Monitor Check Cycle Started`);
-    console.log(`⏰ Time: ${now.toLocaleTimeString()}`);
-    console.log(`${'='.repeat(60)}`);
-
     const monitorsToCheck = await Monitor.getMonitorsToCheck(db);
 
     if (monitorsToCheck.length === 0) {
-      console.log('⏭️  No monitors need checking at this time.');
-      console.log(`${'='.repeat(60)}\n`);
-      return;
+      return; // Silently skip if no monitors need checking
     }
 
-    console.log(`📊 Found ${monitorsToCheck.length} monitor(s) due for checking:`);
-    monitorsToCheck.forEach(m => {
-      if (!m.lastCheckedAt) {
-        console.log(`   • ${m.name} (${m.frequency}) - First check`);
-      } else {
-        const frequencyMs = {
-          '1min': 60 * 1000,
-          '5min': 5 * 60 * 1000,
-          '10min': 10 * 60 * 1000
-        }[m.frequency] || 5 * 60 * 1000;
-
-        const lastCheckTime = new Date(m.lastCheckedAt);
-        const nextCheckTime = new Date(lastCheckTime.getTime() + frequencyMs);
-        const timeOverdue = Math.floor((now - nextCheckTime) / 1000);
-
-        console.log(`   • ${m.name} (${m.frequency})`);
-        console.log(`     Last: ${lastCheckTime.toLocaleTimeString()}`);
-        console.log(`     Due: ${nextCheckTime.toLocaleTimeString()} ${timeOverdue > 0 ? `(${timeOverdue}s overdue)` : ''}`);
-      }
-    });
+    const now = new Date().toLocaleTimeString();
+    console.log(`\n⏰ ${now} - Checking ${monitorsToCheck.length} monitor(s):`);
 
     // Check all monitors in parallel
     const checkPromises = monitorsToCheck.map(monitor =>
       checkMonitor(db, monitor).catch(error => {
-        console.error(`❌ Error checking monitor ${monitor.name}:`, error);
+        console.error(`❌ Error checking ${monitor.name}:`, error.message);
       })
     );
 
     await Promise.all(checkPromises);
-
-    console.log(`\n✅ Monitor Check Cycle Complete`);
-    console.log(`${'='.repeat(60)}\n`);
+    console.log(`✅ Checks complete\n`);
 
   } catch (error) {
-    console.error('❌ Error in checkAllMonitors:', error);
+    console.error('❌ Error in checkAllMonitors:', error.message);
   }
 }
 

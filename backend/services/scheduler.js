@@ -7,11 +7,8 @@ import { checkAllMonitors } from './monitoringService.js';
 export function initializeScheduler(db) {
   console.log('🕐 Initializing monitoring scheduler...');
 
-  // Run every 1 minute to check monitors
-  // The Monitor.getMonitorsToCheck() function filters based on each monitor's frequency
-  const task = cron.schedule('* * * * *', async () => {
-    const now = new Date();
-    console.log(`\n⏰ Cron tick at ${now.toLocaleTimeString()}`);
+  // Run every 30 seconds to check monitors
+  const task = cron.schedule('*/30 * * * * *', async () => {
     await checkAllMonitors(db);
   });
 
@@ -21,10 +18,7 @@ export function initializeScheduler(db) {
     checkAllMonitors(db);
   }, 10000);
 
-  console.log('✓ Monitoring scheduler initialized');
-  console.log('   • Cron runs every 1 minute to check for due monitors');
-  console.log('   • Each monitor is checked at its exact frequency interval (1min/5min/10min)');
-  console.log('   • Example: Monitor with 5min frequency will be checked every 5 minutes precisely');
+  console.log('✓ Monitoring scheduler initialized (runs every 30 seconds)');
 
   return task;
 }

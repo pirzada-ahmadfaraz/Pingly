@@ -118,11 +118,12 @@ export class Monitor {
    * Get monitors that need to be checked based on frequency
    */
   static async getMonitorsToCheck(db) {
-    const now = new Date();
+    const now = Date.now();
     const monitors = await this.findActiveMonitors(db);
 
     return monitors.filter(monitor => {
-      if (!monitor.lastCheckedAt) return true; // Never checked before
+      // Always check if never checked before
+      if (!monitor.lastCheckedAt) return true;
 
       const frequencyMs = {
         '1min': 60 * 1000,
@@ -130,10 +131,12 @@ export class Monitor {
         '10min': 10 * 60 * 1000
       }[monitor.frequency] || 5 * 60 * 1000;
 
-      const nextCheckTime = new Date(monitor.lastCheckedAt).getTime() + frequencyMs;
+      const lastCheckTime = new Date(monitor.lastCheckedAt).getTime();
+      const timeSinceLastCheck = now - lastCheckTime;
 
-      // Check if it's time (within 30 second window to account for cron timing)
-      return now.getTime() >= (nextCheckTime - 30000);
+      // Check in the last 30 seconds before the interval completes
+      // This way the check happens BEFORE timer hits 0
+      return timeSinceLastCheck >= (frequencyMs - 30000);
     });
   }
 }
