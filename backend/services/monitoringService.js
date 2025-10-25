@@ -1,7 +1,38 @@
 import axios from 'axios';
 import { Monitor } from '../models/Monitor.js';
 import { MonitorCheck } from '../models/MonitorCheck.js';
-import { sendTelegramMessage } from '../routes/telegram.js';
+
+/**
+ * Helper function to send Telegram messages
+ */
+async function sendTelegramMessage(chatId, text) {
+  const botToken = process.env.TELEGRAM_BOT_TOKEN;
+
+  if (!botToken) {
+    console.error('TELEGRAM_BOT_TOKEN not set');
+    return;
+  }
+
+  try {
+    const response = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        chat_id: chatId,
+        text,
+        parse_mode: 'HTML'
+      })
+    });
+
+    if (!response.ok) {
+      console.error('Failed to send Telegram message:', await response.text());
+    }
+  } catch (error) {
+    console.error('Error sending Telegram message:', error);
+  }
+}
 
 /**
  * Check a single HTTP monitor

@@ -8,7 +8,6 @@ import { createClient } from '@supabase/supabase-js';
 import jwt from 'jsonwebtoken';
 import { OAuth2Client } from 'google-auth-library';
 import { createMonitorRoutes } from './routes/monitors.js';
-import { createTelegramRoutes } from './routes/telegram.js';
 import { authenticateToken } from './middleware/auth.js';
 import { initializeScheduler, stopScheduler } from './services/scheduler.js';
 
@@ -317,11 +316,169 @@ app.use('/api/monitors', authenticateToken, (req, res, next) => {
   monitorRoutes(req, res, next);
 });
 
-// Telegram integration routes
-app.use('/api/integrations/telegram', authenticateToken, (req, res, next) => {
-  const telegramRoutes = createTelegramRoutes(db);
-  telegramRoutes(req, res, next);
+// Telegram integration routes (protected except webhook)
+const telegramRouter = express.Router();
+
+// Protected routes
+telegramRouter.get('/status', authenticateToken, async (req, res) => {
+  try {
+    const userEmail = req.user.email;
+    const user = await db.collection('users').findOne({ email: userEmail });
+
+    if (user?.telegram?.chatId) {
+      return res.json({
+        connected: true,
+        username: user.telegram.username || 'Unknown'
+      });
+    }
+
+    res.json({ connected: false });
+  } catch (error) {
+    console.error('Telegram status error:', error);
+    res.status(500).json({ error: 'Failed to get Telegram status' });
+  }
 });
+
+telegramRouter.post('/connect', authenticateToken, async (req, res) => {
+  try {
+    const userEmail = req.user.email;
+    const userId = req.user.userId;
+
+    const connectionToken = Buffer.from(`${userId}:${Date.now()}`).toString('base64');
+
+    await db.collection('telegram_pending').insertOne({
+      userId,
+      email: userEmail,
+      token: connectionToken,
+      createdAt: new Date(),
+      expiresAt: new Date(Date.now() + 10 * 60 * 1000)
+    });
+
+    const botUsername = process.env.TELEGRAM_BOT_USERNAME || 'your_bot_username';
+    const botUrl = `https://t.me/${botUsername}?start=${connectionToken}`;
+
+    res.json({
+      success: true,
+      botUrl,
+      message: 'Click start in the Telegram bot to complete connection'
+    });
+  } catch (error) {
+    console.error('Telegram connect error:', error);
+    res.status(500).json({ error: 'Failed to initiate Telegram connection' });
+  }
+});
+
+telegramRouter.post('/disconnect', authenticateToken, async (req, res) => {
+  try {
+    const userEmail = req.user.email;
+
+    await db.collection('users').updateOne(
+      { email: userEmail },
+      { $unset: { telegram: '' } }
+    );
+
+    res.json({ success: true, message: 'Telegram disconnected' });
+  } catch (error) {
+    console.error('Telegram disconnect error:', error);
+    res.status(500).json({ error: 'Failed to disconnect Telegram' });
+  }
+});
+
+// Webhook endpoint (NOT protected - Telegram needs to access it)
+telegramRouter.post('/webhook', async (req, res) => {
+  try {
+    const { message } = req.body;
+
+    if (!message || !message.text) {
+      return res.sendStatus(200);
+    }
+
+    const chatId = message.chat.id;
+    const text = message.text;
+    const username = message.from.username || message.from.first_name;
+
+    if (text.startsWith('/start ')) {
+      const token = text.split(' ')[1];
+
+      const pending = await db.collection('telegram_pending').findOne({
+        token,
+        expiresAt: { $gt: new Date() }
+      });
+
+      if (!pending) {
+        await sendTelegramMessage(chatId, '❌ Invalid or expired connection link. Please try connecting again from the website.');
+        return res.sendStatus(200);
+      }
+
+      await db.collection('users').updateOne(
+        { email: pending.email },
+        {
+          $set: {
+            telegram: {
+              chatId,
+              username,
+              connectedAt: new Date()
+            }
+          }
+        }
+      );
+
+      await db.collection('telegram_pending').deleteOne({ token });
+
+      await sendTelegramMessage(
+        chatId,
+        `✅ Successfully connected to Pingly!\n\nYou will now receive notifications when your monitors go down.\n\nUsername: @${username}`
+      );
+
+      return res.sendStatus(200);
+    }
+
+    if (text === '/start') {
+      await sendTelegramMessage(
+        chatId,
+        '👋 Welcome to Pingly Bot!\n\nTo connect your account, please click the "Connect Telegram" button on the Pingly Integrations page.'
+      );
+      return res.sendStatus(200);
+    }
+
+    res.sendStatus(200);
+  } catch (error) {
+    console.error('Telegram webhook error:', error);
+    res.sendStatus(500);
+  }
+});
+
+// Helper function to send Telegram messages
+async function sendTelegramMessage(chatId, text) {
+  const botToken = process.env.TELEGRAM_BOT_TOKEN;
+
+  if (!botToken) {
+    console.error('TELEGRAM_BOT_TOKEN not set');
+    return;
+  }
+
+  try {
+    const response = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        chat_id: chatId,
+        text,
+        parse_mode: 'HTML'
+      })
+    });
+
+    if (!response.ok) {
+      console.error('Failed to send Telegram message:', await response.text());
+    }
+  } catch (error) {
+    console.error('Error sending Telegram message:', error);
+  }
+}
+
+app.use('/api/integrations/telegram', telegramRouter);
 
 // Test endpoint for Supabase OTP
 app.post('/api/test-otp', async (req, res) => {
