@@ -8,6 +8,7 @@ import { createClient } from '@supabase/supabase-js';
 import jwt from 'jsonwebtoken';
 import { OAuth2Client } from 'google-auth-library';
 import { createMonitorRoutes } from './routes/monitors.js';
+import { createTelegramRoutes } from './routes/telegram.js';
 import { authenticateToken } from './middleware/auth.js';
 import { initializeScheduler, stopScheduler } from './services/scheduler.js';
 
@@ -314,6 +315,12 @@ app.get('/api/', (req, res) => {
 app.use('/api/monitors', authenticateToken, (req, res, next) => {
   const monitorRoutes = createMonitorRoutes(db);
   monitorRoutes(req, res, next);
+});
+
+// Telegram integration routes
+app.use('/api/integrations/telegram', authenticateToken, (req, res, next) => {
+  const telegramRoutes = createTelegramRoutes(db);
+  telegramRoutes(req, res, next);
 });
 
 // Test endpoint for Supabase OTP

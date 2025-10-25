@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { Monitor } from '../models/Monitor.js';
 import { MonitorCheck } from '../models/MonitorCheck.js';
+import { sendTelegramMessage } from '../routes/telegram.js';
 
 /**
  * Check a single HTTP monitor
@@ -120,10 +121,18 @@ export async function checkMonitor(db, monitor) {
       errorMessage: checkResult.errorMessage,
     });
 
+    // Check if status changed from up to down
+    const statusChanged = monitor.lastStatus === 'up' && checkResult.status === 'down';
+
     // Update monitor status
     await Monitor.updateStatus(db, monitor._id, {
       status: checkResult.status,
     });
+
+    // Send Telegram notification if monitor went down
+    if (statusChanged && monitor.notifyOnFailure) {
+      await sendNotification(db, monitor, checkResult);
+    }
 
     const emoji = checkResult.status === 'up' ? '✅' : '❌';
     console.log(`   ${emoji} ${monitor.name} - ${checkResult.responseTime || 'N/A'}ms`);
@@ -163,15 +172,44 @@ export async function checkAllMonitors(db) {
 }
 
 /**
- * Send notification email (placeholder for future implementation)
+ * Send notification when monitor goes down
  */
-export async function sendNotification(monitor, checkResult) {
-  // TODO: Implement email notification using Supabase or other service
-  console.log(`📧 Notification: Monitor "${monitor.name}" is ${checkResult.status}`);
+export async function sendNotification(db, monitor, checkResult) {
+  console.log(`📧 Sending notification: Monitor "${monitor.name}" is ${checkResult.status}`);
 
-  // You can integrate with:
-  // - Supabase for emails
-  // - SendGrid
-  // - AWS SES
-  // - Nodemailer
+  try {
+    // Get user's integrations
+    const user = await db.collection('users').findOne({ _id: monitor.userId });
+
+    if (!user) {
+      console.error('User not found for monitor:', monitor._id);
+      return;
+    }
+
+    // Send Telegram notification if connected
+    if (user.telegram?.chatId) {
+      const message = `
+🚨 <b>Monitor Alert</b>
+
+<b>Monitor:</b> ${monitor.name}
+<b>Status:</b> DOWN ❌
+<b>URL:</b> ${monitor.url || monitor.ipAddress}
+<b>Error:</b> ${checkResult.errorMessage || 'Unknown error'}
+<b>Time:</b> ${new Date().toLocaleString()}
+
+Your monitor has gone down. Please check your service.
+      `.trim();
+
+      await sendTelegramMessage(user.telegram.chatId, message);
+      console.log(`✅ Telegram notification sent to @${user.telegram.username}`);
+    }
+
+    // TODO: Add email notifications here
+    // if (user.additionalEmails && user.additionalEmails.length > 0) {
+    //   await sendEmailNotification(user.additionalEmails, monitor, checkResult);
+    // }
+
+  } catch (error) {
+    console.error('Error sending notification:', error);
+  }
 }

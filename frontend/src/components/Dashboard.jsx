@@ -17,6 +17,9 @@ const Dashboard = () => {
   const [selectedIntegration, setSelectedIntegration] = useState('email');
   const [emailInput, setEmailInput] = useState('');
   const [additionalEmails, setAdditionalEmails] = useState([]);
+  const [telegramConnected, setTelegramConnected] = useState(false);
+  const [telegramUsername, setTelegramUsername] = useState('');
+  const [telegramLoading, setTelegramLoading] = useState(false);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -89,6 +92,35 @@ const Dashboard = () => {
     }
   }, [loading, user]);
 
+  // Check Telegram connection status
+  useEffect(() => {
+    const checkTelegramStatus = async () => {
+      const token = localStorage.getItem('auth_token');
+      if (!token) return;
+
+      try {
+        const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/integrations/telegram/status`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+
+        const data = await response.json();
+
+        if (response.ok && data.connected) {
+          setTelegramConnected(true);
+          setTelegramUsername(data.username);
+        }
+      } catch (error) {
+        console.error('Error checking Telegram status:', error);
+      }
+    };
+
+    if (!loading && user) {
+      checkTelegramStatus();
+    }
+  }, [loading, user]);
+
   // Handle click outside dropdown
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -137,6 +169,73 @@ const Dashboard = () => {
     { id: 'twiliosms', name: 'Twilio SMS', icon: Phone, color: 'text-red-400' },
     { id: 'webhook', name: 'Webhook', icon: Webhook, color: 'text-blue-300' },
   ];
+
+  const handleConnectTelegram = async () => {
+    setTelegramLoading(true);
+    try {
+      const token = localStorage.getItem('auth_token');
+      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/integrations/telegram/connect`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.botUrl) {
+        // Open Telegram bot in new window
+        window.open(data.botUrl, '_blank');
+
+        // Poll for connection status
+        const pollInterval = setInterval(async () => {
+          const statusResponse = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/integrations/telegram/status`, {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+            },
+          });
+
+          const statusData = await statusResponse.json();
+
+          if (statusData.connected) {
+            setTelegramConnected(true);
+            setTelegramUsername(statusData.username);
+            clearInterval(pollInterval);
+            setTelegramLoading(false);
+          }
+        }, 3000); // Check every 3 seconds
+
+        // Stop polling after 2 minutes
+        setTimeout(() => {
+          clearInterval(pollInterval);
+          setTelegramLoading(false);
+        }, 120000);
+      }
+    } catch (error) {
+      console.error('Error connecting Telegram:', error);
+      setTelegramLoading(false);
+    }
+  };
+
+  const handleDisconnectTelegram = async () => {
+    try {
+      const token = localStorage.getItem('auth_token');
+      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/integrations/telegram/disconnect`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        setTelegramConnected(false);
+        setTelegramUsername('');
+      }
+    } catch (error) {
+      console.error('Error disconnecting Telegram:', error);
+    }
+  };
 
   if (loading) {
     return (
@@ -311,6 +410,47 @@ const Dashboard = () => {
                         Maximum limit of 2 additional emails reached
                       </p>
                     )}
+                  </div>
+                ) : selectedIntegration === 'telegram' ? (
+                  <div className="bg-[#0f0f0f] border border-white/10 rounded-lg p-6">
+                    <p className="text-gray-400 mb-6">
+                      Click the button below to connect your Telegram account.
+                    </p>
+
+                    <div className="mb-6">
+                      <div className="flex items-center gap-2 mb-4">
+                        <span className="text-gray-300 font-medium">Current status:</span>
+                        <span className={telegramConnected ? "text-green-400" : "text-gray-400"}>
+                          {telegramConnected ? `Connected with @${telegramUsername}` : 'Not connected'}
+                        </span>
+                      </div>
+
+                      {!telegramConnected ? (
+                        <button
+                          onClick={handleConnectTelegram}
+                          disabled={telegramLoading}
+                          className="px-6 py-3 bg-green-500 hover:bg-green-600 disabled:bg-gray-600 text-white rounded-lg font-medium transition-colors"
+                        >
+                          {telegramLoading ? 'Waiting for connection...' : 'Connect Telegram'}
+                        </button>
+                      ) : (
+                        <button
+                          onClick={handleDisconnectTelegram}
+                          className="px-6 py-3 bg-red-500 hover:bg-red-600 text-white rounded-lg font-medium transition-colors"
+                        >
+                          Disconnect Telegram
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="bg-[#1a1a1a] border border-white/10 rounded-lg p-4">
+                      <p className="text-gray-400 text-sm mb-2">
+                        Do not forget to click <span className="text-white font-semibold">start</span>, otherwise the bot will not work
+                      </p>
+                      <p className="text-gray-400 text-sm">
+                        After connecting to Telegram, if it's not reflected here please refresh the page.
+                      </p>
+                    </div>
                   </div>
                 ) : (
                   <div className="bg-[#0f0f0f] border border-white/10 rounded-lg p-6">
