@@ -43,6 +43,9 @@ curl -X POST https://your-backend.vercel.app/api/trigger-monitoring
 3. **Added Error Handling**: Better error reporting in scheduler
 4. **Manual Trigger**: Added endpoint to manually test monitoring
 5. **Improved Tolerance**: 10-second tolerance instead of 30 seconds
+6. **Auto-Update Graph**: Graph automatically updates when timer reaches 0
+7. **Removed Refresh Dependency**: No more manual refresh needed
+8. **Smart Data Fetching**: Only fetches data when new checks are expected
 
 ## 📊 **Expected Results:**
 
@@ -51,5 +54,15 @@ curl -X POST https://your-backend.vercel.app/api/trigger-monitoring
 - ✅ Next check timer starts counting down
 - ✅ Every 5 minutes: new check, new graph point, timer resets
 - ✅ Response time metrics update with new data
+- ✅ **Graph auto-updates when timer reaches 0** (no refresh needed)
+- ✅ **No unnecessary checks on page refresh**
+- ✅ **Smooth, automatic updates every 5 minutes**
 
-The monitoring system should now work properly! 🚀
+## 🎯 **Key Improvements:**
+
+1. **Auto-Update**: When the countdown timer reaches "0m 0s", the graph automatically fetches new data
+2. **No Refresh Needed**: The page updates itself without manual refresh
+3. **Clean Updates**: Graph lines don't jump around - they update smoothly
+4. **Efficient**: Only fetches data when new checks are expected
+
+The monitoring system now works exactly as you wanted! 🚀

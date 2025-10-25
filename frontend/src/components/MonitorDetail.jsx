@@ -36,39 +36,14 @@ const MonitorDetail = () => {
       }
     };
 
+    // Initial fetch only
     fetchData();
 
-    // Smart refresh: only fetch when we expect new data
-    const smartRefresh = () => {
-      if (!monitor || !monitor.lastCheckedAt) {
-        // If no monitor data yet, check every 30 seconds
-        return 30000;
-      }
-
-      const frequencyMs = {
-        '1min': 60 * 1000,
-        '5min': 5 * 60 * 1000,
-        '10min': 10 * 60 * 1000
-      }[monitor.frequency] || 5 * 60 * 1000;
-
-      const lastCheck = new Date(monitor.lastCheckedAt).getTime();
-      const nextExpectedCheck = lastCheck + frequencyMs;
-      const now = Date.now();
-      const timeUntilNext = nextExpectedCheck - now;
-
-      // If we're close to the next expected check (within 30 seconds), check more frequently
-      if (timeUntilNext <= 30000 && timeUntilNext > 0) {
-        return 10000; // Check every 10 seconds when close to next check
-      }
-      
-      // Otherwise, check every 2 minutes (less frequent)
-      return 120000;
-    };
-
-    const interval = setInterval(fetchData, smartRefresh());
+    // Auto-update every 5 minutes (300000ms) to get new check data
+    const interval = setInterval(fetchData, 300000);
 
     return () => clearInterval(interval);
-  }, [id, monitor?.frequency, monitor?.lastCheckedAt]);
+  }, [id]);
 
   // Countdown timer for next check
   useEffect(() => {
@@ -76,6 +51,8 @@ const MonitorDetail = () => {
       setNextCheckIn('Pending...');
       return;
     }
+
+    let hasTriggeredFetch = false;
 
     const calculateNextCheck = () => {
       const frequencyMs = {
@@ -89,9 +66,22 @@ const MonitorDetail = () => {
       const now = Date.now();
       const timeUntilNext = nextCheck - now;
 
-      // If past due time, show 0m 0s (will update when new check completes)
-      if (timeUntilNext <= -10000) { // More than 10 seconds overdue
+      // If past due time, show 0m 0s and trigger a fetch
+      if (timeUntilNext <= 0 && !hasTriggeredFetch) {
         setNextCheckIn('0m 0s');
+        hasTriggeredFetch = true;
+        
+        // Trigger a data fetch to get the new check
+        setTimeout(async () => {
+          try {
+            await fetchMonitorDetails();
+            await fetchMonitorChecks();
+            hasTriggeredFetch = false; // Reset for next cycle
+          } catch (error) {
+            console.error('Auto-fetch error:', error);
+            hasTriggeredFetch = false;
+          }
+        }, 2000); // Wait 2 seconds for the backend to complete the check
         return;
       }
 
