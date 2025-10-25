@@ -121,9 +121,14 @@ export class Monitor {
     const now = Date.now();
     const monitors = await this.findActiveMonitors(db);
 
-    return monitors.filter(monitor => {
+    console.log(`🔍 Found ${monitors.length} active monitors`);
+
+    const monitorsToCheck = monitors.filter(monitor => {
       // Always check if never checked before
-      if (!monitor.lastCheckedAt) return true;
+      if (!monitor.lastCheckedAt) {
+        console.log(`📋 ${monitor.name}: Never checked before - will check`);
+        return true;
+      }
 
       const frequencyMs = {
         '1min': 60 * 1000,
@@ -134,9 +139,19 @@ export class Monitor {
       const lastCheckTime = new Date(monitor.lastCheckedAt).getTime();
       const timeSinceLastCheck = now - lastCheckTime;
 
-      // Check in the last 30 seconds before the interval completes
-      // This way the check happens BEFORE timer hits 0
-      return timeSinceLastCheck >= (frequencyMs - 30000);
+      // Check if enough time has passed (with 10 second tolerance)
+      const shouldCheck = timeSinceLastCheck >= (frequencyMs - 10000);
+      
+      if (shouldCheck) {
+        console.log(`📋 ${monitor.name}: ${Math.round(timeSinceLastCheck/1000)}s since last check (${monitor.frequency}) - will check`);
+      } else {
+        console.log(`⏳ ${monitor.name}: ${Math.round(timeSinceLastCheck/1000)}s since last check (${monitor.frequency}) - waiting`);
+      }
+      
+      return shouldCheck;
     });
+
+    console.log(`📋 ${monitorsToCheck.length} monitors need checking`);
+    return monitorsToCheck;
   }
 }

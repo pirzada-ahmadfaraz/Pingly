@@ -389,6 +389,18 @@ app.get('/api/status', async (req, res) => {
   }
 });
 
+// Manual trigger for monitoring (for testing)
+app.post('/api/trigger-monitoring', async (req, res) => {
+  try {
+    const { checkAllMonitors } = await import('./services/monitoringService.js');
+    await checkAllMonitors(db);
+    res.json({ success: true, message: 'Monitoring triggered successfully' });
+  } catch (error) {
+    console.error('Trigger monitoring error:', error);
+    res.status(500).json({ error: 'Failed to trigger monitoring' });
+  }
+});
+
 async function startServer() {
   await connectDB();
 

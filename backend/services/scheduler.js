@@ -9,13 +9,19 @@ export function initializeScheduler(db) {
 
   // Run every 30 seconds to check monitors
   const task = cron.schedule('*/30 * * * * *', async () => {
-    await checkAllMonitors(db);
+    try {
+      await checkAllMonitors(db);
+    } catch (error) {
+      console.error('❌ Scheduler error:', error);
+    }
   });
 
   // Run immediately on startup after 10 seconds
   setTimeout(() => {
     console.log('\n🚀 Running initial monitor checks...');
-    checkAllMonitors(db);
+    checkAllMonitors(db).catch(error => {
+      console.error('❌ Initial check error:', error);
+    });
   }, 10000);
 
   console.log('✓ Monitoring scheduler initialized (runs every 30 seconds)');

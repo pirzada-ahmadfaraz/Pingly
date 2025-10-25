@@ -140,6 +140,7 @@ export async function checkAllMonitors(db) {
     const monitorsToCheck = await Monitor.getMonitorsToCheck(db);
 
     if (monitorsToCheck.length === 0) {
+      console.log('⏰ No monitors need checking right now');
       return; // Silently skip if no monitors need checking
     }
 
