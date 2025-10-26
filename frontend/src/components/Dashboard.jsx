@@ -24,6 +24,7 @@ const Dashboard = () => {
   const [discordWebhook, setDiscordWebhook] = useState('');
   const [discordConnected, setDiscordConnected] = useState(false);
   const [discordLoading, setDiscordLoading] = useState(false);
+  const [toast, setToast] = useState({ show: false, message: '' });
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -270,10 +271,18 @@ const Dashboard = () => {
     }
   };
 
+  // Toast notification handler
+  const showToast = (message) => {
+    setToast({ show: true, message });
+    setTimeout(() => {
+      setToast({ show: false, message: '' });
+    }, 3000);
+  };
+
   // Discord handlers
   const handleAddDiscordWebhook = async () => {
     if (!discordWebhook || !discordWebhook.startsWith('https://discord.com/api/webhooks/')) {
-      alert('Please enter a valid Discord webhook URL');
+      showToast('Please enter a valid Discord webhook URL');
       return;
     }
 
@@ -293,13 +302,13 @@ const Dashboard = () => {
 
       if (response.ok) {
         setDiscordConnected(true);
-        alert('Discord webhook connected successfully!');
+        showToast('Discord notifications activated');
       } else {
-        alert(data.error || 'Failed to connect Discord webhook');
+        showToast(data.error || 'Failed to connect Discord webhook');
       }
     } catch (error) {
       console.error('Error connecting Discord:', error);
-      alert('Failed to connect Discord webhook');
+      showToast('Failed to connect Discord webhook');
     } finally {
       setDiscordLoading(false);
     }
@@ -318,6 +327,7 @@ const Dashboard = () => {
       if (response.ok) {
         setDiscordConnected(false);
         setDiscordWebhook('');
+        showToast('Discord notifications deactivated');
       }
     } catch (error) {
       console.error('Error disconnecting Discord:', error);
@@ -546,11 +556,21 @@ const Dashboard = () => {
                     </p>
 
                     <div className="mb-6">
-                      <div className="flex items-center gap-2 mb-4">
-                        <span className="text-gray-300 font-medium">Current status:</span>
-                        <span className={discordConnected ? "text-green-400" : "text-gray-400"}>
-                          {discordConnected ? 'Connected' : 'Not connected'}
-                        </span>
+                      <div className="mb-4">
+                        <div className="text-gray-300 font-medium mb-2">Current status:</div>
+                        <div className="text-gray-400">
+                          {discordConnected ? 'Connected to' : 'Not connected'}
+                        </div>
+                        {discordConnected && (
+                          <a
+                            href={discordWebhook}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-green-400 hover:text-green-300 text-sm break-all underline"
+                          >
+                            {discordWebhook}
+                          </a>
+                        )}
                       </div>
 
                       {!discordConnected ? (
@@ -571,17 +591,12 @@ const Dashboard = () => {
                           </button>
                         </div>
                       ) : (
-                        <div className="space-y-3">
-                          <div className="bg-[#1a1a1a] px-4 py-2 rounded-lg">
-                            <span className="text-gray-400 text-sm break-all">{discordWebhook}</span>
-                          </div>
-                          <button
-                            onClick={handleDisconnectDiscord}
-                            className="px-6 py-3 bg-red-500 hover:bg-red-600 text-white rounded-lg font-medium transition-colors"
-                          >
-                            Disconnect Discord
-                          </button>
-                        </div>
+                        <button
+                          onClick={handleDisconnectDiscord}
+                          className="px-6 py-3 bg-red-500 hover:bg-red-600 text-white rounded-lg font-medium transition-colors"
+                        >
+                          Remove
+                        </button>
                       )}
                     </div>
 
@@ -815,6 +830,13 @@ const Dashboard = () => {
           </div>
         </aside>
       </main>
+
+      {/* Toast Notification */}
+      {toast.show && (
+        <div className="fixed bottom-8 right-8 bg-[#1a1a1a] border border-white/10 rounded-lg px-6 py-4 shadow-2xl animate-slide-up z-50">
+          <p className="text-white text-sm">{toast.message}</p>
+        </div>
+      )}
     </div>
   );
 };
