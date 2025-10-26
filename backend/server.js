@@ -480,6 +480,92 @@ async function sendTelegramMessage(chatId, text) {
 
 app.use('/api/integrations/telegram', telegramRouter);
 
+// Discord integration routes
+const discordRouter = express.Router();
+
+discordRouter.get('/status', authenticateToken, async (req, res) => {
+  try {
+    const userEmail = req.user.email;
+    const user = await db.collection('users').findOne({ email: userEmail });
+
+    if (user?.discord?.webhookUrl) {
+      return res.json({
+        connected: true,
+        webhook: user.discord.webhookUrl
+      });
+    }
+
+    res.json({ connected: false });
+  } catch (error) {
+    console.error('Discord status error:', error);
+    res.status(500).json({ error: 'Failed to get Discord status' });
+  }
+});
+
+discordRouter.post('/connect', authenticateToken, async (req, res) => {
+  try {
+    const userEmail = req.user.email;
+    const { webhookUrl } = req.body;
+
+    if (!webhookUrl || !webhookUrl.startsWith('https://discord.com/api/webhooks/')) {
+      return res.status(400).json({ error: 'Invalid Discord webhook URL' });
+    }
+
+    // Test the webhook
+    try {
+      const testResponse = await fetch(webhookUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          content: '✅ Pingly Discord integration connected successfully! You will receive notifications here when your monitors go down.'
+        })
+      });
+
+      if (!testResponse.ok) {
+        return res.status(400).json({ error: 'Invalid webhook URL or webhook is disabled' });
+      }
+    } catch (error) {
+      return res.status(400).json({ error: 'Failed to verify webhook URL' });
+    }
+
+    // Save webhook to user
+    await db.collection('users').updateOne(
+      { email: userEmail },
+      {
+        $set: {
+          discord: {
+            webhookUrl,
+            connectedAt: new Date()
+          }
+        }
+      }
+    );
+
+    res.json({ success: true, message: 'Discord webhook connected' });
+  } catch (error) {
+    console.error('Discord connect error:', error);
+    res.status(500).json({ error: 'Failed to connect Discord webhook' });
+  }
+});
+
+discordRouter.post('/disconnect', authenticateToken, async (req, res) => {
+  try {
+    const userEmail = req.user.email;
+
+    await db.collection('users').updateOne(
+      { email: userEmail },
+      { $unset: { discord: '' } }
+    );
+
+    res.json({ success: true, message: 'Discord disconnected' });
+  } catch (error) {
+    console.error('Discord disconnect error:', error);
+    res.status(500).json({ error: 'Failed to disconnect Discord' });
+  }
+});
+
+app.use('/api/integrations/discord', discordRouter);
+
 // Test endpoint for Supabase OTP
 app.post('/api/test-otp', async (req, res) => {
   try {

@@ -281,7 +281,13 @@ const MonitorDetail = () => {
               return (
                 <li key={item.id}>
                   <button
-                    onClick={() => navigate('/dashboard')}
+                    onClick={() => {
+                      if (item.id === 'integrations') {
+                        navigate('/dashboard', { state: { activeTab: 'integrations' } });
+                      } else {
+                        navigate('/dashboard');
+                      }
+                    }}
                     className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors text-left ${
                       item.id === 'monitors'
                         ? 'bg-green-500/10 text-green-500'

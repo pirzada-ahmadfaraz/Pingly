@@ -203,6 +203,63 @@ export async function checkAllMonitors(db) {
 }
 
 /**
+ * Send Discord notification
+ */
+async function sendDiscordNotification(webhookUrl, monitor, checkResult) {
+  try {
+    const embed = {
+      title: '🚨 Monitor Alert',
+      description: 'Your monitor has gone down. Please check your service.',
+      color: 15158332, // Red color
+      fields: [
+        {
+          name: 'Monitor',
+          value: monitor.name,
+          inline: true
+        },
+        {
+          name: 'Status',
+          value: 'DOWN ❌',
+          inline: true
+        },
+        {
+          name: 'URL',
+          value: monitor.url || monitor.ipAddress,
+          inline: false
+        },
+        {
+          name: 'Error',
+          value: checkResult.errorMessage || 'Unknown error',
+          inline: false
+        },
+        {
+          name: 'Time',
+          value: new Date().toLocaleString(),
+          inline: false
+        }
+      ],
+      timestamp: new Date().toISOString()
+    };
+
+    const response = await fetch(webhookUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        embeds: [embed]
+      })
+    });
+
+    if (!response.ok) {
+      console.error('Failed to send Discord notification:', await response.text());
+    }
+  } catch (error) {
+    console.error('Error sending Discord notification:', error);
+  }
+}
+
+/**
  * Send notification when monitor goes down
  */
 export async function sendNotification(db, monitor, checkResult) {
@@ -233,6 +290,12 @@ Your monitor has gone down. Please check your service.
 
       await sendTelegramMessage(user.telegram.chatId, message);
       console.log(`✅ Telegram notification sent to @${user.telegram.username}`);
+    }
+
+    // Send Discord notification if connected
+    if (user.discord?.webhookUrl) {
+      await sendDiscordNotification(user.discord.webhookUrl, monitor, checkResult);
+      console.log(`✅ Discord notification sent`);
     }
 
     // TODO: Add email notifications here

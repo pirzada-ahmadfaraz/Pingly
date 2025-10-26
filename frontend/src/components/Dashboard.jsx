@@ -1,12 +1,13 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { LayoutGrid, AlertCircle, FileText, Zap, Users, Settings, Globe, Radio, ChevronDown, Mail, Send, MessageCircle, Slack, MessageSquare, Bell, Phone, Webhook } from 'lucide-react';
 
 const Dashboard = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('monitors');
+  const [activeTab, setActiveTab] = useState(location.state?.activeTab || 'monitors');
   const [searchQuery, setSearchQuery] = useState('');
   const [showMonitorDropdown, setShowMonitorDropdown] = useState(false);
   const [monitors, setMonitors] = useState([]);
@@ -20,6 +21,9 @@ const Dashboard = () => {
   const [telegramConnected, setTelegramConnected] = useState(false);
   const [telegramUsername, setTelegramUsername] = useState('');
   const [telegramLoading, setTelegramLoading] = useState(false);
+  const [discordWebhook, setDiscordWebhook] = useState('');
+  const [discordConnected, setDiscordConnected] = useState(false);
+  const [discordLoading, setDiscordLoading] = useState(false);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -118,6 +122,35 @@ const Dashboard = () => {
 
     if (!loading && user) {
       checkTelegramStatus();
+    }
+  }, [loading, user]);
+
+  // Check Discord connection status
+  useEffect(() => {
+    const checkDiscordStatus = async () => {
+      const token = localStorage.getItem('auth_token');
+      if (!token) return;
+
+      try {
+        const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/integrations/discord/status`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+
+        const data = await response.json();
+
+        if (response.ok && data.connected) {
+          setDiscordConnected(true);
+          setDiscordWebhook(data.webhook);
+        }
+      } catch (error) {
+        console.error('Error checking Discord status:', error);
+      }
+    };
+
+    if (!loading && user) {
+      checkDiscordStatus();
     }
   }, [loading, user]);
 
@@ -234,6 +267,60 @@ const Dashboard = () => {
       }
     } catch (error) {
       console.error('Error disconnecting Telegram:', error);
+    }
+  };
+
+  // Discord handlers
+  const handleAddDiscordWebhook = async () => {
+    if (!discordWebhook || !discordWebhook.startsWith('https://discord.com/api/webhooks/')) {
+      alert('Please enter a valid Discord webhook URL');
+      return;
+    }
+
+    setDiscordLoading(true);
+    try {
+      const token = localStorage.getItem('auth_token');
+      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/integrations/discord/connect`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ webhookUrl: discordWebhook }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setDiscordConnected(true);
+        alert('Discord webhook connected successfully!');
+      } else {
+        alert(data.error || 'Failed to connect Discord webhook');
+      }
+    } catch (error) {
+      console.error('Error connecting Discord:', error);
+      alert('Failed to connect Discord webhook');
+    } finally {
+      setDiscordLoading(false);
+    }
+  };
+
+  const handleDisconnectDiscord = async () => {
+    try {
+      const token = localStorage.getItem('auth_token');
+      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/integrations/discord/disconnect`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        setDiscordConnected(false);
+        setDiscordWebhook('');
+      }
+    } catch (error) {
+      console.error('Error disconnecting Discord:', error);
     }
   };
 
@@ -449,6 +536,66 @@ const Dashboard = () => {
                       </p>
                       <p className="text-gray-400 text-sm">
                         After connecting to Telegram, if it's not reflected here please refresh the page.
+                      </p>
+                    </div>
+                  </div>
+                ) : selectedIntegration === 'discord' ? (
+                  <div className="bg-[#0f0f0f] border border-white/10 rounded-lg p-6">
+                    <p className="text-gray-400 mb-6">
+                      To receive Discord notifications, provide a webhook URL. We'll send POST requests to this URL.
+                    </p>
+
+                    <div className="mb-6">
+                      <div className="flex items-center gap-2 mb-4">
+                        <span className="text-gray-300 font-medium">Current status:</span>
+                        <span className={discordConnected ? "text-green-400" : "text-gray-400"}>
+                          {discordConnected ? 'Connected' : 'Not connected'}
+                        </span>
+                      </div>
+
+                      {!discordConnected ? (
+                        <div className="flex gap-3">
+                          <input
+                            type="text"
+                            value={discordWebhook}
+                            onChange={(e) => setDiscordWebhook(e.target.value)}
+                            placeholder="Enter webhook URL"
+                            className="flex-1 px-4 py-3 bg-transparent border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500/50"
+                          />
+                          <button
+                            onClick={handleAddDiscordWebhook}
+                            disabled={discordLoading}
+                            className="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-600 text-white rounded-lg font-medium transition-colors"
+                          >
+                            {discordLoading ? 'Adding...' : 'Add Webhook URL'}
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="space-y-3">
+                          <div className="bg-[#1a1a1a] px-4 py-2 rounded-lg">
+                            <span className="text-gray-400 text-sm break-all">{discordWebhook}</span>
+                          </div>
+                          <button
+                            onClick={handleDisconnectDiscord}
+                            className="px-6 py-3 bg-red-500 hover:bg-red-600 text-white rounded-lg font-medium transition-colors"
+                          >
+                            Disconnect Discord
+                          </button>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="bg-[#1a1a1a] border border-white/10 rounded-lg p-4">
+                      <p className="text-gray-400 text-sm">
+                        Steps to setup{' '}
+                        <a
+                          href="https://support.discord.com/hc/en-us/articles/228383668-Intro-to-Webhooks"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-indigo-400 hover:text-indigo-300 underline"
+                        >
+                          Discord Incoming webhook
+                        </a>
                       </p>
                     </div>
                   </div>
