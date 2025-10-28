@@ -24,6 +24,9 @@ const Dashboard = () => {
   const [discordWebhook, setDiscordWebhook] = useState('');
   const [discordConnected, setDiscordConnected] = useState(false);
   const [discordLoading, setDiscordLoading] = useState(false);
+  const [slackWebhook, setSlackWebhook] = useState('');
+  const [slackConnected, setSlackConnected] = useState(false);
+  const [slackLoading, setSlackLoading] = useState(false);
   const [toast, setToast] = useState({ show: false, message: '' });
 
   useEffect(() => {
@@ -152,6 +155,35 @@ const Dashboard = () => {
 
     if (!loading && user) {
       checkDiscordStatus();
+    }
+  }, [loading, user]);
+
+  // Check Slack connection status
+  useEffect(() => {
+    const checkSlackStatus = async () => {
+      const token = localStorage.getItem('auth_token');
+      if (!token) return;
+
+      try {
+        const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/integrations/slack/status`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+
+        const data = await response.json();
+
+        if (response.ok && data.connected) {
+          setSlackConnected(true);
+          setSlackWebhook(data.webhook);
+        }
+      } catch (error) {
+        console.error('Error checking Slack status:', error);
+      }
+    };
+
+    if (!loading && user) {
+      checkSlackStatus();
     }
   }, [loading, user]);
 
@@ -331,6 +363,61 @@ const Dashboard = () => {
       }
     } catch (error) {
       console.error('Error disconnecting Discord:', error);
+    }
+  };
+
+  // Slack handlers
+  const handleAddSlackWebhook = async () => {
+    if (!slackWebhook || !slackWebhook.startsWith('https://hooks.slack.com/services/')) {
+      showToast('Please enter a valid Slack webhook URL');
+      return;
+    }
+
+    setSlackLoading(true);
+    try {
+      const token = localStorage.getItem('auth_token');
+      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/integrations/slack/connect`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ webhookUrl: slackWebhook }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setSlackConnected(true);
+        showToast('Slack notifications activated');
+      } else {
+        showToast(data.error || 'Failed to connect Slack webhook');
+      }
+    } catch (error) {
+      console.error('Error connecting Slack:', error);
+      showToast('Failed to connect Slack webhook');
+    } finally {
+      setSlackLoading(false);
+    }
+  };
+
+  const handleDisconnectSlack = async () => {
+    try {
+      const token = localStorage.getItem('auth_token');
+      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/integrations/slack/disconnect`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        setSlackConnected(false);
+        setSlackWebhook('');
+        showToast('Slack notifications deactivated');
+      }
+    } catch (error) {
+      console.error('Error disconnecting Slack:', error);
     }
   };
 
@@ -610,6 +697,66 @@ const Dashboard = () => {
                           className="text-indigo-400 hover:text-indigo-300 underline"
                         >
                           Discord Incoming webhook
+                        </a>
+                      </p>
+                    </div>
+                  </div>
+                ) : selectedIntegration === 'slack' ? (
+                  <div className="bg-[#0f0f0f] border border-white/10 rounded-lg p-6">
+                    <p className="text-gray-400 mb-6">
+                      To enable Slack notifications, you need to activate Incoming Webhooks. Once activated, simply provide the webhook URL for each Slack channel where you'd like to receive notifications.
+                    </p>
+
+                    <div className="mb-6">
+                      <div className="mb-4">
+                        <div className="text-gray-300 font-medium mb-2">Current status:</div>
+                        <div className="text-gray-400">
+                          {slackConnected ? 'Connected' : 'Not connected'}
+                        </div>
+                        {slackConnected && (
+                          <div className="text-gray-400 text-sm mt-2 break-all">
+                            {slackWebhook}
+                          </div>
+                        )}
+                      </div>
+
+                      {!slackConnected ? (
+                        <div className="flex gap-3">
+                          <input
+                            type="text"
+                            value={slackWebhook}
+                            onChange={(e) => setSlackWebhook(e.target.value)}
+                            placeholder="Enter webhook URL"
+                            className="flex-1 px-4 py-3 bg-transparent border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-pink-500/50"
+                          />
+                          <button
+                            onClick={handleAddSlackWebhook}
+                            disabled={slackLoading}
+                            className="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-600 text-white rounded-lg font-medium transition-colors"
+                          >
+                            {slackLoading ? 'Adding...' : 'Add Webhook URL'}
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={handleDisconnectSlack}
+                          className="px-6 py-3 bg-red-500 hover:bg-red-600 text-white rounded-lg font-medium transition-colors"
+                        >
+                          Remove
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="bg-[#1a1a1a] border border-white/10 rounded-lg p-4">
+                      <p className="text-gray-400 text-sm">
+                        Steps to setup{' '}
+                        <a
+                          href="https://api.slack.com/messaging/webhooks"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-pink-400 hover:text-pink-300 underline"
+                        >
+                          Slack Incoming Webhook
                         </a>
                       </p>
                     </div>

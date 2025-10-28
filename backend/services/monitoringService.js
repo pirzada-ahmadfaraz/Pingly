@@ -259,6 +259,73 @@ async function sendDiscordNotification(webhookUrl, monitor, checkResult) {
   }
 }
 
+async function sendSlackNotification(webhookUrl, monitor, checkResult) {
+  try {
+    const message = {
+      text: '🚨 *Monitor Alert*',
+      blocks: [
+        {
+          type: 'header',
+          text: {
+            type: 'plain_text',
+            text: '🚨 Monitor Alert',
+            emoji: true
+          }
+        },
+        {
+          type: 'section',
+          text: {
+            type: 'mrkdwn',
+            text: 'Your monitor has gone down. Please check your service.'
+          }
+        },
+        {
+          type: 'section',
+          fields: [
+            {
+              type: 'mrkdwn',
+              text: `*Monitor:*\n${monitor.name}`
+            },
+            {
+              type: 'mrkdwn',
+              text: '*Status:*\nDOWN ❌'
+            },
+            {
+              type: 'mrkdwn',
+              text: `*URL:*\n${monitor.url || monitor.ipAddress}`
+            },
+            {
+              type: 'mrkdwn',
+              text: `*Time:*\n${new Date().toLocaleString()}`
+            }
+          ]
+        },
+        {
+          type: 'section',
+          text: {
+            type: 'mrkdwn',
+            text: `*Error:*\n${checkResult.errorMessage || 'Unknown error'}`
+          }
+        }
+      ]
+    };
+
+    const response = await fetch(webhookUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(message)
+    });
+
+    if (!response.ok) {
+      console.error('Failed to send Slack notification:', await response.text());
+    }
+  } catch (error) {
+    console.error('Error sending Slack notification:', error);
+  }
+}
+
 /**
  * Send notification when monitor goes down
  */
@@ -296,6 +363,12 @@ Your monitor has gone down. Please check your service.
     if (user.discord?.webhookUrl) {
       await sendDiscordNotification(user.discord.webhookUrl, monitor, checkResult);
       console.log(`✅ Discord notification sent`);
+    }
+
+    // Send Slack notification if connected
+    if (user.slack?.webhookUrl) {
+      await sendSlackNotification(user.slack.webhookUrl, monitor, checkResult);
+      console.log(`✅ Slack notification sent`);
     }
 
     // TODO: Add email notifications here

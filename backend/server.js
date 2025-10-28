@@ -566,6 +566,92 @@ discordRouter.post('/disconnect', authenticateToken, async (req, res) => {
 
 app.use('/api/integrations/discord', discordRouter);
 
+// Slack integration routes
+const slackRouter = express.Router();
+
+slackRouter.get('/status', authenticateToken, async (req, res) => {
+  try {
+    const userEmail = req.user.email;
+    const user = await db.collection('users').findOne({ email: userEmail });
+
+    if (user?.slack?.webhookUrl) {
+      return res.json({
+        connected: true,
+        webhook: user.slack.webhookUrl
+      });
+    }
+
+    res.json({ connected: false });
+  } catch (error) {
+    console.error('Slack status error:', error);
+    res.status(500).json({ error: 'Failed to get Slack status' });
+  }
+});
+
+slackRouter.post('/connect', authenticateToken, async (req, res) => {
+  try {
+    const userEmail = req.user.email;
+    const { webhookUrl } = req.body;
+
+    if (!webhookUrl || !webhookUrl.startsWith('https://hooks.slack.com/services/')) {
+      return res.status(400).json({ error: 'Invalid Slack webhook URL' });
+    }
+
+    // Test the webhook
+    try {
+      const testResponse = await fetch(webhookUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          text: '✅ Pingly Slack integration connected successfully! You will receive notifications here when your monitors go down.'
+        })
+      });
+
+      if (!testResponse.ok) {
+        return res.status(400).json({ error: 'Invalid webhook URL or webhook is disabled' });
+      }
+    } catch (error) {
+      return res.status(400).json({ error: 'Failed to verify webhook URL' });
+    }
+
+    // Save webhook to user
+    await db.collection('users').updateOne(
+      { email: userEmail },
+      {
+        $set: {
+          slack: {
+            webhookUrl,
+            connectedAt: new Date()
+          }
+        }
+      }
+    );
+
+    res.json({ success: true, message: 'Slack webhook connected' });
+  } catch (error) {
+    console.error('Slack connect error:', error);
+    res.status(500).json({ error: 'Failed to connect Slack webhook' });
+  }
+});
+
+slackRouter.post('/disconnect', authenticateToken, async (req, res) => {
+  try {
+    const userEmail = req.user.email;
+
+    await db.collection('users').updateOne(
+      { email: userEmail },
+      { $unset: { slack: '' } }
+    );
+
+    res.json({ success: true, message: 'Slack disconnected' });
+  } catch (error) {
+    console.error('Slack disconnect error:', error);
+    res.status(500).json({ error: 'Failed to disconnect Slack' });
+  }
+});
+
+app.use('/api/integrations/slack', slackRouter);
+
 // Test endpoint for Supabase OTP
 app.post('/api/test-otp', async (req, res) => {
   try {
