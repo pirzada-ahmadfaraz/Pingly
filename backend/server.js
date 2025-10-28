@@ -652,6 +652,92 @@ slackRouter.post('/disconnect', authenticateToken, async (req, res) => {
 
 app.use('/api/integrations/slack', slackRouter);
 
+// Microsoft Teams integration routes
+const teamsRouter = express.Router();
+
+teamsRouter.get('/status', authenticateToken, async (req, res) => {
+  try {
+    const userEmail = req.user.email;
+    const user = await db.collection('users').findOne({ email: userEmail });
+
+    if (user?.teams?.webhookUrl) {
+      return res.json({
+        connected: true,
+        webhook: user.teams.webhookUrl
+      });
+    }
+
+    res.json({ connected: false });
+  } catch (error) {
+    console.error('Teams status error:', error);
+    res.status(500).json({ error: 'Failed to get Teams status' });
+  }
+});
+
+teamsRouter.post('/connect', authenticateToken, async (req, res) => {
+  try {
+    const userEmail = req.user.email;
+    const { webhookUrl } = req.body;
+
+    if (!webhookUrl || !webhookUrl.includes('webhook.office.com')) {
+      return res.status(400).json({ error: 'Invalid Microsoft Teams webhook URL' });
+    }
+
+    // Test the webhook
+    try {
+      const testResponse = await fetch(webhookUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          text: '✅ Pingly Microsoft Teams integration connected successfully! You will receive notifications here when your monitors go down.'
+        })
+      });
+
+      if (!testResponse.ok) {
+        return res.status(400).json({ error: 'Invalid webhook URL or webhook is disabled' });
+      }
+    } catch (error) {
+      return res.status(400).json({ error: 'Failed to verify webhook URL' });
+    }
+
+    // Save webhook to user
+    await db.collection('users').updateOne(
+      { email: userEmail },
+      {
+        $set: {
+          teams: {
+            webhookUrl,
+            connectedAt: new Date()
+          }
+        }
+      }
+    );
+
+    res.json({ success: true, message: 'Teams webhook connected' });
+  } catch (error) {
+    console.error('Teams connect error:', error);
+    res.status(500).json({ error: 'Failed to connect Teams webhook' });
+  }
+});
+
+teamsRouter.post('/disconnect', authenticateToken, async (req, res) => {
+  try {
+    const userEmail = req.user.email;
+
+    await db.collection('users').updateOne(
+      { email: userEmail },
+      { $unset: { teams: '' } }
+    );
+
+    res.json({ success: true, message: 'Teams disconnected' });
+  } catch (error) {
+    console.error('Teams disconnect error:', error);
+    res.status(500).json({ error: 'Failed to disconnect Teams' });
+  }
+});
+
+app.use('/api/integrations/teams', teamsRouter);
+
 // Test endpoint for Supabase OTP
 app.post('/api/test-otp', async (req, res) => {
   try {

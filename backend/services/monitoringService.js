@@ -326,6 +326,60 @@ async function sendSlackNotification(webhookUrl, monitor, checkResult) {
   }
 }
 
+async function sendTeamsNotification(webhookUrl, monitor, checkResult) {
+  try {
+    const message = {
+      '@type': 'MessageCard',
+      '@context': 'https://schema.org/extensions',
+      summary: 'Monitor Alert',
+      themeColor: 'D6001C', // Red color
+      title: '🚨 Monitor Alert',
+      sections: [
+        {
+          activityTitle: 'Your monitor has gone down',
+          activitySubtitle: 'Please check your service',
+          facts: [
+            {
+              name: 'Monitor:',
+              value: monitor.name
+            },
+            {
+              name: 'Status:',
+              value: 'DOWN ❌'
+            },
+            {
+              name: 'URL:',
+              value: monitor.url || monitor.ipAddress
+            },
+            {
+              name: 'Error:',
+              value: checkResult.errorMessage || 'Unknown error'
+            },
+            {
+              name: 'Time:',
+              value: new Date().toLocaleString()
+            }
+          ]
+        }
+      ]
+    };
+
+    const response = await fetch(webhookUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(message)
+    });
+
+    if (!response.ok) {
+      console.error('Failed to send Teams notification:', await response.text());
+    }
+  } catch (error) {
+    console.error('Error sending Teams notification:', error);
+  }
+}
+
 /**
  * Send notification when monitor goes down
  */
@@ -369,6 +423,12 @@ Your monitor has gone down. Please check your service.
     if (user.slack?.webhookUrl) {
       await sendSlackNotification(user.slack.webhookUrl, monitor, checkResult);
       console.log(`✅ Slack notification sent`);
+    }
+
+    // Send Teams notification if connected
+    if (user.teams?.webhookUrl) {
+      await sendTeamsNotification(user.teams.webhookUrl, monitor, checkResult);
+      console.log(`✅ Microsoft Teams notification sent`);
     }
 
     // TODO: Add email notifications here

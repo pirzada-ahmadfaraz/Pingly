@@ -27,6 +27,9 @@ const Dashboard = () => {
   const [slackWebhook, setSlackWebhook] = useState('');
   const [slackConnected, setSlackConnected] = useState(false);
   const [slackLoading, setSlackLoading] = useState(false);
+  const [teamsWebhook, setTeamsWebhook] = useState('');
+  const [teamsConnected, setTeamsConnected] = useState(false);
+  const [teamsLoading, setTeamsLoading] = useState(false);
   const [toast, setToast] = useState({ show: false, message: '' });
 
   useEffect(() => {
@@ -184,6 +187,35 @@ const Dashboard = () => {
 
     if (!loading && user) {
       checkSlackStatus();
+    }
+  }, [loading, user]);
+
+  // Check Teams connection status
+  useEffect(() => {
+    const checkTeamsStatus = async () => {
+      const token = localStorage.getItem('auth_token');
+      if (!token) return;
+
+      try {
+        const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/integrations/teams/status`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+
+        const data = await response.json();
+
+        if (response.ok && data.connected) {
+          setTeamsConnected(true);
+          setTeamsWebhook(data.webhook);
+        }
+      } catch (error) {
+        console.error('Error checking Teams status:', error);
+      }
+    };
+
+    if (!loading && user) {
+      checkTeamsStatus();
     }
   }, [loading, user]);
 
@@ -418,6 +450,61 @@ const Dashboard = () => {
       }
     } catch (error) {
       console.error('Error disconnecting Slack:', error);
+    }
+  };
+
+  // Teams handlers
+  const handleAddTeamsWebhook = async () => {
+    if (!teamsWebhook || !teamsWebhook.includes('webhook.office.com')) {
+      showToast('Please enter a valid Microsoft Teams webhook URL');
+      return;
+    }
+
+    setTeamsLoading(true);
+    try {
+      const token = localStorage.getItem('auth_token');
+      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/integrations/teams/connect`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ webhookUrl: teamsWebhook }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setTeamsConnected(true);
+        showToast('Microsoft Teams notifications activated');
+      } else {
+        showToast(data.error || 'Failed to connect Teams webhook');
+      }
+    } catch (error) {
+      console.error('Error connecting Teams:', error);
+      showToast('Failed to connect Teams webhook');
+    } finally {
+      setTeamsLoading(false);
+    }
+  };
+
+  const handleDisconnectTeams = async () => {
+    try {
+      const token = localStorage.getItem('auth_token');
+      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/integrations/teams/disconnect`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        setTeamsConnected(false);
+        setTeamsWebhook('');
+        showToast('Microsoft Teams notifications deactivated');
+      }
+    } catch (error) {
+      console.error('Error disconnecting Teams:', error);
     }
   };
 
@@ -757,6 +844,66 @@ const Dashboard = () => {
                           className="text-pink-400 hover:text-pink-300 underline"
                         >
                           Slack Incoming Webhook
+                        </a>
+                      </p>
+                    </div>
+                  </div>
+                ) : selectedIntegration === 'teams' ? (
+                  <div className="bg-[#0f0f0f] border border-white/10 rounded-lg p-6">
+                    <p className="text-gray-400 mb-6">
+                      To enable Microsoft Teams notifications, you need to activate Incoming Webhooks. Once activated, simply provide the webhook URL for each Teams channel where you'd like to receive notifications.
+                    </p>
+
+                    <div className="mb-6">
+                      <div className="mb-4">
+                        <div className="text-gray-300 font-medium mb-2">Current status:</div>
+                        <div className="text-gray-400">
+                          {teamsConnected ? 'Connected' : 'Not connected'}
+                        </div>
+                        {teamsConnected && (
+                          <div className="text-gray-400 text-sm mt-2 break-all">
+                            {teamsWebhook}
+                          </div>
+                        )}
+                      </div>
+
+                      {!teamsConnected ? (
+                        <div className="flex gap-3">
+                          <input
+                            type="text"
+                            value={teamsWebhook}
+                            onChange={(e) => setTeamsWebhook(e.target.value)}
+                            placeholder="Enter webhook URL"
+                            className="flex-1 px-4 py-3 bg-transparent border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-blue-500/50"
+                          />
+                          <button
+                            onClick={handleAddTeamsWebhook}
+                            disabled={teamsLoading}
+                            className="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-600 text-white rounded-lg font-medium transition-colors"
+                          >
+                            {teamsLoading ? 'Adding...' : 'Add Webhook URL'}
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={handleDisconnectTeams}
+                          className="px-6 py-3 bg-red-500 hover:bg-red-600 text-white rounded-lg font-medium transition-colors"
+                        >
+                          Remove
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="bg-[#1a1a1a] border border-white/10 rounded-lg p-4">
+                      <p className="text-gray-400 text-sm">
+                        Steps to setup{' '}
+                        <a
+                          href="https://learn.microsoft.com/en-us/microsoftteams/platform/webhooks-and-connectors/how-to/add-incoming-webhook"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-blue-400 hover:text-blue-300 underline"
+                        >
+                          Teams Incoming webhook
                         </a>
                       </p>
                     </div>
