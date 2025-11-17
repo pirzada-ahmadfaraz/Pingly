@@ -30,6 +30,22 @@ const Dashboard = () => {
   const [teamsWebhook, setTeamsWebhook] = useState('');
   const [teamsConnected, setTeamsConnected] = useState(false);
   const [teamsLoading, setTeamsLoading] = useState(false);
+  const [pagerdutyRoutingKey, setPagerdutyRoutingKey] = useState('');
+  const [pagerdutyConnected, setPagerdutyConnected] = useState(false);
+  const [pagerdutyLoading, setPagerdutyLoading] = useState(false);
+  const [googlechatWebhook, setGooglechatWebhook] = useState('');
+  const [googlechatConnected, setGooglechatConnected] = useState(false);
+  const [googlechatLoading, setGooglechatLoading] = useState(false);
+  const [twilioAccountSid, setTwilioAccountSid] = useState('');
+  const [twilioAuthToken, setTwilioAuthToken] = useState('');
+  const [twilioFromNumber, setTwilioFromNumber] = useState('');
+  const [twilioToNumber, setTwilioToNumber] = useState('');
+  const [twilioConnected, setTwilioConnected] = useState(false);
+  const [twilioLoading, setTwilioLoading] = useState(false);
+  const [webhookUrl, setWebhookUrl] = useState('');
+  const [webhookMethod, setWebhookMethod] = useState('POST');
+  const [webhookConnected, setWebhookConnected] = useState(false);
+  const [webhookLoading, setWebhookLoading] = useState(false);
   const [toast, setToast] = useState({ show: false, message: '' });
 
   useEffect(() => {
@@ -216,6 +232,124 @@ const Dashboard = () => {
 
     if (!loading && user) {
       checkTeamsStatus();
+    }
+  }, [loading, user]);
+
+  // Check PagerDuty connection status
+  useEffect(() => {
+    const checkPagerDutyStatus = async () => {
+      const token = localStorage.getItem('auth_token');
+      if (!token) return;
+
+      try {
+        const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/integrations/pagerduty/status`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+
+        const data = await response.json();
+
+        if (response.ok && data.connected) {
+          setPagerdutyConnected(true);
+          setPagerdutyRoutingKey(data.routingKey);
+        }
+      } catch (error) {
+        console.error('Error checking PagerDuty status:', error);
+      }
+    };
+
+    if (!loading && user) {
+      checkPagerDutyStatus();
+    }
+  }, [loading, user]);
+
+  // Check Google Chat connection status
+  useEffect(() => {
+    const checkGoogleChatStatus = async () => {
+      const token = localStorage.getItem('auth_token');
+      if (!token) return;
+
+      try {
+        const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/integrations/googlechat/status`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+
+        const data = await response.json();
+
+        if (response.ok && data.connected) {
+          setGooglechatConnected(true);
+          setGooglechatWebhook(data.webhook);
+        }
+      } catch (error) {
+        console.error('Error checking Google Chat status:', error);
+      }
+    };
+
+    if (!loading && user) {
+      checkGoogleChatStatus();
+    }
+  }, [loading, user]);
+
+  // Check Twilio SMS connection status
+  useEffect(() => {
+    const checkTwilioStatus = async () => {
+      const token = localStorage.getItem('auth_token');
+      if (!token) return;
+
+      try {
+        const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/integrations/twiliosms/status`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+
+        const data = await response.json();
+
+        if (response.ok && data.connected) {
+          setTwilioConnected(true);
+          setTwilioFromNumber(data.phoneNumber);
+          setTwilioToNumber(data.toNumber);
+        }
+      } catch (error) {
+        console.error('Error checking Twilio SMS status:', error);
+      }
+    };
+
+    if (!loading && user) {
+      checkTwilioStatus();
+    }
+  }, [loading, user]);
+
+  // Check Webhook connection status
+  useEffect(() => {
+    const checkWebhookStatus = async () => {
+      const token = localStorage.getItem('auth_token');
+      if (!token) return;
+
+      try {
+        const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/integrations/webhook/status`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+
+        const data = await response.json();
+
+        if (response.ok && data.connected) {
+          setWebhookConnected(true);
+          setWebhookUrl(data.webhook);
+          setWebhookMethod(data.method || 'POST');
+        }
+      } catch (error) {
+        console.error('Error checking Webhook status:', error);
+      }
+    };
+
+    if (!loading && user) {
+      checkWebhookStatus();
     }
   }, [loading, user]);
 
@@ -505,6 +639,238 @@ const Dashboard = () => {
       }
     } catch (error) {
       console.error('Error disconnecting Teams:', error);
+    }
+  };
+
+  // PagerDuty handlers
+  const handleConnectPagerDuty = async () => {
+    if (!pagerdutyRoutingKey || pagerdutyRoutingKey.length < 32) {
+      showToast('Please enter a valid PagerDuty routing key');
+      return;
+    }
+
+    setPagerdutyLoading(true);
+    try {
+      const token = localStorage.getItem('auth_token');
+      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/integrations/pagerduty/connect`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ routingKey: pagerdutyRoutingKey }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setPagerdutyConnected(true);
+        showToast('PagerDuty notifications activated');
+      } else {
+        showToast(data.error || 'Failed to connect PagerDuty');
+      }
+    } catch (error) {
+      console.error('Error connecting PagerDuty:', error);
+      showToast('Failed to connect PagerDuty');
+    } finally {
+      setPagerdutyLoading(false);
+    }
+  };
+
+  const handleDisconnectPagerDuty = async () => {
+    try {
+      const token = localStorage.getItem('auth_token');
+      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/integrations/pagerduty/disconnect`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        setPagerdutyConnected(false);
+        setPagerdutyRoutingKey('');
+        showToast('PagerDuty notifications deactivated');
+      }
+    } catch (error) {
+      console.error('Error disconnecting PagerDuty:', error);
+    }
+  };
+
+  // Google Chat handlers
+  const handleAddGoogleChatWebhook = async () => {
+    if (!googlechatWebhook || !googlechatWebhook.includes('chat.googleapis.com')) {
+      showToast('Please enter a valid Google Chat webhook URL');
+      return;
+    }
+
+    setGooglechatLoading(true);
+    try {
+      const token = localStorage.getItem('auth_token');
+      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/integrations/googlechat/connect`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ webhookUrl: googlechatWebhook }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setGooglechatConnected(true);
+        showToast('Google Chat notifications activated');
+      } else {
+        showToast(data.error || 'Failed to connect Google Chat webhook');
+      }
+    } catch (error) {
+      console.error('Error connecting Google Chat:', error);
+      showToast('Failed to connect Google Chat webhook');
+    } finally {
+      setGooglechatLoading(false);
+    }
+  };
+
+  const handleDisconnectGoogleChat = async () => {
+    try {
+      const token = localStorage.getItem('auth_token');
+      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/integrations/googlechat/disconnect`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        setGooglechatConnected(false);
+        setGooglechatWebhook('');
+        showToast('Google Chat notifications deactivated');
+      }
+    } catch (error) {
+      console.error('Error disconnecting Google Chat:', error);
+    }
+  };
+
+  // Twilio SMS handlers
+  const handleConnectTwilioSms = async () => {
+    if (!twilioAccountSid || !twilioAuthToken || !twilioFromNumber || !twilioToNumber) {
+      showToast('Please fill in all Twilio SMS fields');
+      return;
+    }
+
+    setTwilioLoading(true);
+    try {
+      const token = localStorage.getItem('auth_token');
+      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/integrations/twiliosms/connect`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          accountSid: twilioAccountSid,
+          authToken: twilioAuthToken,
+          phoneNumber: twilioFromNumber,
+          toNumber: twilioToNumber,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setTwilioConnected(true);
+        showToast('Twilio SMS notifications activated');
+      } else {
+        showToast(data.error || 'Failed to connect Twilio SMS');
+      }
+    } catch (error) {
+      console.error('Error connecting Twilio SMS:', error);
+      showToast('Failed to connect Twilio SMS');
+    } finally {
+      setTwilioLoading(false);
+    }
+  };
+
+  const handleDisconnectTwilioSms = async () => {
+    try {
+      const token = localStorage.getItem('auth_token');
+      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/integrations/twiliosms/disconnect`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        setTwilioConnected(false);
+        setTwilioAccountSid('');
+        setTwilioAuthToken('');
+        setTwilioFromNumber('');
+        setTwilioToNumber('');
+        showToast('Twilio SMS notifications deactivated');
+      }
+    } catch (error) {
+      console.error('Error disconnecting Twilio SMS:', error);
+    }
+  };
+
+  // Webhook handlers
+  const handleConnectWebhook = async () => {
+    if (!webhookUrl) {
+      showToast('Please enter a webhook URL');
+      return;
+    }
+
+    setWebhookLoading(true);
+    try {
+      const token = localStorage.getItem('auth_token');
+      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/integrations/webhook/connect`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          webhookUrl: webhookUrl,
+          method: webhookMethod,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setWebhookConnected(true);
+        showToast('Webhook notifications activated');
+      } else {
+        showToast(data.error || 'Failed to connect webhook');
+      }
+    } catch (error) {
+      console.error('Error connecting webhook:', error);
+      showToast('Failed to connect webhook');
+    } finally {
+      setWebhookLoading(false);
+    }
+  };
+
+  const handleDisconnectWebhook = async () => {
+    try {
+      const token = localStorage.getItem('auth_token');
+      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/integrations/webhook/disconnect`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        setWebhookConnected(false);
+        setWebhookUrl('');
+        setWebhookMethod('POST');
+        showToast('Webhook notifications deactivated');
+      }
+    } catch (error) {
+      console.error('Error disconnecting webhook:', error);
     }
   };
 
@@ -906,6 +1272,281 @@ const Dashboard = () => {
                           Teams Incoming webhook
                         </a>
                       </p>
+                    </div>
+                  </div>
+                ) : selectedIntegration === 'pagerduty' ? (
+                  <div className="bg-[#0f0f0f] border border-white/10 rounded-lg p-6">
+                    <p className="text-gray-400 mb-6">
+                      PagerDuty is an incident management platform. Connect your PagerDuty service to receive critical alerts when monitors go down.
+                    </p>
+
+                    <div className="mb-6">
+                      <div className="mb-4">
+                        <div className="text-gray-300 font-medium mb-2">Current status:</div>
+                        <div className="text-gray-400">
+                          {pagerdutyConnected ? 'Connected' : 'Not connected'}
+                        </div>
+                        {pagerdutyConnected && (
+                          <div className="text-gray-400 text-sm mt-2">
+                            Routing Key: {pagerdutyRoutingKey}
+                          </div>
+                        )}
+                      </div>
+
+                      {!pagerdutyConnected ? (
+                        <div className="flex gap-3">
+                          <input
+                            type="text"
+                            value={pagerdutyRoutingKey}
+                            onChange={(e) => setPagerdutyRoutingKey(e.target.value)}
+                            placeholder="Enter PagerDuty routing key"
+                            className="flex-1 px-4 py-3 bg-transparent border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-green-500/50"
+                          />
+                          <button
+                            onClick={handleConnectPagerDuty}
+                            disabled={pagerdutyLoading}
+                            className="px-6 py-3 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 text-white rounded-lg font-medium transition-colors"
+                          >
+                            {pagerdutyLoading ? 'Connecting...' : 'Connect'}
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={handleDisconnectPagerDuty}
+                          className="px-6 py-3 bg-red-500 hover:bg-red-600 text-white rounded-lg font-medium transition-colors"
+                        >
+                          Disconnect
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="bg-[#1a1a1a] border border-white/10 rounded-lg p-4">
+                      <p className="text-gray-400 text-sm">
+                        Get your routing key from{' '}
+                        <a
+                          href="https://support.pagerduty.com/docs/services-and-integrations#create-a-generic-events-api-integration"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-blue-400 hover:text-blue-300 underline"
+                        >
+                          PagerDuty Events API v2 integration
+                        </a>
+                      </p>
+                    </div>
+                  </div>
+                ) : selectedIntegration === 'googlechat' ? (
+                  <div className="bg-[#0f0f0f] border border-white/10 rounded-lg p-6">
+                    <p className="text-gray-400 mb-6">
+                      Google Chat is a communication platform. Connect your Google Chat space to receive notifications when monitors go down.
+                    </p>
+
+                    <div className="mb-6">
+                      <div className="mb-4">
+                        <div className="text-gray-300 font-medium mb-2">Current status:</div>
+                        <div className="text-gray-400">
+                          {googlechatConnected ? 'Connected' : 'Not connected'}
+                        </div>
+                        {googlechatConnected && (
+                          <div className="text-gray-400 text-sm mt-2 break-all">
+                            {googlechatWebhook}
+                          </div>
+                        )}
+                      </div>
+
+                      {!googlechatConnected ? (
+                        <div className="flex gap-3">
+                          <input
+                            type="text"
+                            value={googlechatWebhook}
+                            onChange={(e) => setGooglechatWebhook(e.target.value)}
+                            placeholder="Enter Google Chat webhook URL"
+                            className="flex-1 px-4 py-3 bg-transparent border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-green-500/50"
+                          />
+                          <button
+                            onClick={handleAddGoogleChatWebhook}
+                            disabled={googlechatLoading}
+                            className="px-6 py-3 bg-green-600 hover:bg-green-700 disabled:bg-gray-600 text-white rounded-lg font-medium transition-colors"
+                          >
+                            {googlechatLoading ? 'Adding...' : 'Add Webhook'}
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={handleDisconnectGoogleChat}
+                          className="px-6 py-3 bg-red-500 hover:bg-red-600 text-white rounded-lg font-medium transition-colors"
+                        >
+                          Remove
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="bg-[#1a1a1a] border border-white/10 rounded-lg p-4">
+                      <p className="text-gray-400 text-sm">
+                        Setup{' '}
+                        <a
+                          href="https://developers.google.com/chat/how-tos/webhooks"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-blue-400 hover:text-blue-300 underline"
+                        >
+                          Google Chat incoming webhook
+                        </a>
+                      </p>
+                    </div>
+                  </div>
+                ) : selectedIntegration === 'twiliosms' ? (
+                  <div className="bg-[#0f0f0f] border border-white/10 rounded-lg p-6">
+                    <p className="text-gray-400 mb-6">
+                      Twilio SMS allows you to receive text message alerts when your monitors go down.
+                    </p>
+
+                    <div className="mb-6">
+                      <div className="mb-4">
+                        <div className="text-gray-300 font-medium mb-2">Current status:</div>
+                        <div className="text-gray-400">
+                          {twilioConnected ? 'Connected' : 'Not connected'}
+                        </div>
+                        {twilioConnected && (
+                          <div className="text-gray-400 text-sm mt-2">
+                            From: {twilioFromNumber} → To: {twilioToNumber}
+                          </div>
+                        )}
+                      </div>
+
+                      {!twilioConnected ? (
+                        <div className="space-y-3">
+                          <input
+                            type="text"
+                            value={twilioAccountSid}
+                            onChange={(e) => setTwilioAccountSid(e.target.value)}
+                            placeholder="Account SID"
+                            className="w-full px-4 py-3 bg-transparent border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-red-500/50"
+                          />
+                          <input
+                            type="password"
+                            value={twilioAuthToken}
+                            onChange={(e) => setTwilioAuthToken(e.target.value)}
+                            placeholder="Auth Token"
+                            className="w-full px-4 py-3 bg-transparent border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-red-500/50"
+                          />
+                          <input
+                            type="text"
+                            value={twilioFromNumber}
+                            onChange={(e) => setTwilioFromNumber(e.target.value)}
+                            placeholder="From Number (e.g., +1234567890)"
+                            className="w-full px-4 py-3 bg-transparent border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-red-500/50"
+                          />
+                          <input
+                            type="text"
+                            value={twilioToNumber}
+                            onChange={(e) => setTwilioToNumber(e.target.value)}
+                            placeholder="To Number (e.g., +1234567890)"
+                            className="w-full px-4 py-3 bg-transparent border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-red-500/50"
+                          />
+                          <button
+                            onClick={handleConnectTwilioSms}
+                            disabled={twilioLoading}
+                            className="w-full px-6 py-3 bg-red-600 hover:bg-red-700 disabled:bg-gray-600 text-white rounded-lg font-medium transition-colors"
+                          >
+                            {twilioLoading ? 'Connecting...' : 'Connect Twilio SMS'}
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={handleDisconnectTwilioSms}
+                          className="px-6 py-3 bg-red-500 hover:bg-red-600 text-white rounded-lg font-medium transition-colors"
+                        >
+                          Disconnect
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="bg-[#1a1a1a] border border-white/10 rounded-lg p-4">
+                      <p className="text-gray-400 text-sm">
+                        Get your credentials from{' '}
+                        <a
+                          href="https://console.twilio.com"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-blue-400 hover:text-blue-300 underline"
+                        >
+                          Twilio Console
+                        </a>
+                      </p>
+                    </div>
+                  </div>
+                ) : selectedIntegration === 'webhook' ? (
+                  <div className="bg-[#0f0f0f] border border-white/10 rounded-lg p-6">
+                    <p className="text-gray-400 mb-6">
+                      Send custom webhook notifications to any HTTP endpoint when your monitors go down.
+                    </p>
+
+                    <div className="mb-6">
+                      <div className="mb-4">
+                        <div className="text-gray-300 font-medium mb-2">Current status:</div>
+                        <div className="text-gray-400">
+                          {webhookConnected ? 'Connected' : 'Not connected'}
+                        </div>
+                        {webhookConnected && (
+                          <div className="text-gray-400 text-sm mt-2 break-all">
+                            {webhookMethod} {webhookUrl}
+                          </div>
+                        )}
+                      </div>
+
+                      {!webhookConnected ? (
+                        <div className="space-y-3">
+                          <input
+                            type="text"
+                            value={webhookUrl}
+                            onChange={(e) => setWebhookUrl(e.target.value)}
+                            placeholder="Enter webhook URL"
+                            className="w-full px-4 py-3 bg-transparent border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-blue-500/50"
+                          />
+                          <select
+                            value={webhookMethod}
+                            onChange={(e) => setWebhookMethod(e.target.value)}
+                            className="w-full px-4 py-3 bg-[#1a1a1a] border border-white/10 rounded-lg text-white focus:outline-none focus:border-blue-500/50"
+                          >
+                            <option value="POST">POST</option>
+                            <option value="GET">GET</option>
+                            <option value="PUT">PUT</option>
+                            <option value="PATCH">PATCH</option>
+                          </select>
+                          <button
+                            onClick={handleConnectWebhook}
+                            disabled={webhookLoading}
+                            className="w-full px-6 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 text-white rounded-lg font-medium transition-colors"
+                          >
+                            {webhookLoading ? 'Connecting...' : 'Connect Webhook'}
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={handleDisconnectWebhook}
+                          className="px-6 py-3 bg-red-500 hover:bg-red-600 text-white rounded-lg font-medium transition-colors"
+                        >
+                          Remove
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="bg-[#1a1a1a] border border-white/10 rounded-lg p-4">
+                      <p className="text-gray-400 text-sm mb-2">
+                        The webhook will receive a JSON payload with monitor details:
+                      </p>
+                      <pre className="text-xs text-gray-500 overflow-x-auto">
+{`{
+  "type": "monitor_down",
+  "monitor": {
+    "name": "Example Monitor",
+    "url": "https://example.com",
+    "status": "down"
+  },
+  "error": "Connection timeout",
+  "timestamp": "2024-01-01T00:00:00.000Z"
+}`}
+                      </pre>
                     </div>
                   </div>
                 ) : (

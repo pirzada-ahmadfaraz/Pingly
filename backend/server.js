@@ -738,6 +738,416 @@ teamsRouter.post('/disconnect', authenticateToken, async (req, res) => {
 
 app.use('/api/integrations/teams', teamsRouter);
 
+// PagerDuty integration routes
+const pagerDutyRouter = express.Router();
+
+pagerDutyRouter.get('/status', authenticateToken, async (req, res) => {
+  try {
+    const userEmail = req.user.email;
+    const user = await db.collection('users').findOne({ email: userEmail });
+
+    if (user?.pagerduty?.routingKey) {
+      return res.json({
+        connected: true,
+        routingKey: user.pagerduty.routingKey.slice(0, 8) + '...' // Show partial for security
+      });
+    }
+
+    res.json({ connected: false });
+  } catch (error) {
+    console.error('PagerDuty status error:', error);
+    res.status(500).json({ error: 'Failed to get PagerDuty status' });
+  }
+});
+
+pagerDutyRouter.post('/connect', authenticateToken, async (req, res) => {
+  try {
+    const userEmail = req.user.email;
+    const { routingKey } = req.body;
+
+    if (!routingKey || routingKey.length < 32) {
+      return res.status(400).json({ error: 'Invalid PagerDuty routing key' });
+    }
+
+    // Test the routing key by sending a test event
+    try {
+      const testResponse = await fetch('https://events.pagerduty.com/v2/enqueue', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          routing_key: routingKey,
+          event_action: 'trigger',
+          payload: {
+            summary: 'Pingly PagerDuty Integration Test',
+            severity: 'info',
+            source: 'pingly-monitoring',
+            custom_details: {
+              message: 'PagerDuty integration connected successfully! You will receive alerts here when your monitors go down.'
+            }
+          }
+        })
+      });
+
+      const responseData = await testResponse.json();
+
+      if (!testResponse.ok || responseData.status !== 'success') {
+        return res.status(400).json({ error: 'Invalid routing key or PagerDuty service configuration' });
+      }
+    } catch (error) {
+      console.error('PagerDuty test error:', error);
+      return res.status(400).json({ error: 'Failed to verify PagerDuty routing key' });
+    }
+
+    // Save routing key to user
+    await db.collection('users').updateOne(
+      { email: userEmail },
+      {
+        $set: {
+          pagerduty: {
+            routingKey,
+            connectedAt: new Date()
+          }
+        }
+      }
+    );
+
+    res.json({ success: true, message: 'PagerDuty integration connected' });
+  } catch (error) {
+    console.error('PagerDuty connect error:', error);
+    res.status(500).json({ error: 'Failed to connect PagerDuty integration' });
+  }
+});
+
+pagerDutyRouter.post('/disconnect', authenticateToken, async (req, res) => {
+  try {
+    const userEmail = req.user.email;
+
+    await db.collection('users').updateOne(
+      { email: userEmail },
+      { $unset: { pagerduty: '' } }
+    );
+
+    res.json({ success: true, message: 'PagerDuty disconnected' });
+  } catch (error) {
+    console.error('PagerDuty disconnect error:', error);
+    res.status(500).json({ error: 'Failed to disconnect PagerDuty' });
+  }
+});
+
+app.use('/api/integrations/pagerduty', pagerDutyRouter);
+
+// Google Chat integration routes
+const googleChatRouter = express.Router();
+
+googleChatRouter.get('/status', authenticateToken, async (req, res) => {
+  try {
+    const userEmail = req.user.email;
+    const user = await db.collection('users').findOne({ email: userEmail });
+
+    if (user?.googlechat?.webhookUrl) {
+      return res.json({
+        connected: true,
+        webhook: user.googlechat.webhookUrl
+      });
+    }
+
+    res.json({ connected: false });
+  } catch (error) {
+    console.error('Google Chat status error:', error);
+    res.status(500).json({ error: 'Failed to get Google Chat status' });
+  }
+});
+
+googleChatRouter.post('/connect', authenticateToken, async (req, res) => {
+  try {
+    const userEmail = req.user.email;
+    const { webhookUrl } = req.body;
+
+    if (!webhookUrl || !webhookUrl.includes('chat.googleapis.com')) {
+      return res.status(400).json({ error: 'Invalid Google Chat webhook URL' });
+    }
+
+    // Test the webhook
+    try {
+      const testResponse = await fetch(webhookUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          text: '✅ Pingly Google Chat integration connected successfully! You will receive notifications here when your monitors go down.'
+        })
+      });
+
+      if (!testResponse.ok) {
+        return res.status(400).json({ error: 'Invalid webhook URL or webhook is disabled' });
+      }
+    } catch (error) {
+      return res.status(400).json({ error: 'Failed to verify webhook URL' });
+    }
+
+    // Save webhook to user
+    await db.collection('users').updateOne(
+      { email: userEmail },
+      {
+        $set: {
+          googlechat: {
+            webhookUrl,
+            connectedAt: new Date()
+          }
+        }
+      }
+    );
+
+    res.json({ success: true, message: 'Google Chat webhook connected' });
+  } catch (error) {
+    console.error('Google Chat connect error:', error);
+    res.status(500).json({ error: 'Failed to connect Google Chat webhook' });
+  }
+});
+
+googleChatRouter.post('/disconnect', authenticateToken, async (req, res) => {
+  try {
+    const userEmail = req.user.email;
+
+    await db.collection('users').updateOne(
+      { email: userEmail },
+      { $unset: { googlechat: '' } }
+    );
+
+    res.json({ success: true, message: 'Google Chat disconnected' });
+  } catch (error) {
+    console.error('Google Chat disconnect error:', error);
+    res.status(500).json({ error: 'Failed to disconnect Google Chat' });
+  }
+});
+
+app.use('/api/integrations/googlechat', googleChatRouter);
+
+// Twilio SMS integration routes
+const twilioSmsRouter = express.Router();
+
+twilioSmsRouter.get('/status', authenticateToken, async (req, res) => {
+  try {
+    const userEmail = req.user.email;
+    const user = await db.collection('users').findOne({ email: userEmail });
+
+    if (user?.twiliosms?.accountSid && user?.twiliosms?.authToken) {
+      return res.json({
+        connected: true,
+        phoneNumber: user.twiliosms.phoneNumber,
+        toNumber: user.twiliosms.toNumber
+      });
+    }
+
+    res.json({ connected: false });
+  } catch (error) {
+    console.error('Twilio SMS status error:', error);
+    res.status(500).json({ error: 'Failed to get Twilio SMS status' });
+  }
+});
+
+twilioSmsRouter.post('/connect', authenticateToken, async (req, res) => {
+  try {
+    const userEmail = req.user.email;
+    const { accountSid, authToken, phoneNumber, toNumber } = req.body;
+
+    if (!accountSid || !authToken || !phoneNumber || !toNumber) {
+      return res.status(400).json({ error: 'All fields are required (Account SID, Auth Token, From Number, To Number)' });
+    }
+
+    // Validate phone number format
+    const phoneRegex = /^\+[1-9]\d{1,14}$/;
+    if (!phoneRegex.test(phoneNumber) || !phoneRegex.test(toNumber)) {
+      return res.status(400).json({ error: 'Phone numbers must be in E.164 format (e.g., +1234567890)' });
+    }
+
+    // Test Twilio credentials by sending a test SMS
+    try {
+      const testResponse = await fetch(
+        `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': 'Basic ' + Buffer.from(`${accountSid}:${authToken}`).toString('base64'),
+            'Content-Type': 'application/x-www-form-urlencoded'
+          },
+          body: new URLSearchParams({
+            From: phoneNumber,
+            To: toNumber,
+            Body: 'Pingly Twilio SMS integration connected successfully! You will receive alerts here when your monitors go down.'
+          })
+        }
+      );
+
+      if (!testResponse.ok) {
+        const errorData = await testResponse.json();
+        return res.status(400).json({ error: `Twilio error: ${errorData.message || 'Invalid credentials or configuration'}` });
+      }
+    } catch (error) {
+      console.error('Twilio test error:', error);
+      return res.status(400).json({ error: 'Failed to verify Twilio credentials' });
+    }
+
+    // Save Twilio config to user
+    await db.collection('users').updateOne(
+      { email: userEmail },
+      {
+        $set: {
+          twiliosms: {
+            accountSid,
+            authToken,
+            phoneNumber,
+            toNumber,
+            connectedAt: new Date()
+          }
+        }
+      }
+    );
+
+    res.json({ success: true, message: 'Twilio SMS connected' });
+  } catch (error) {
+    console.error('Twilio SMS connect error:', error);
+    res.status(500).json({ error: 'Failed to connect Twilio SMS' });
+  }
+});
+
+twilioSmsRouter.post('/disconnect', authenticateToken, async (req, res) => {
+  try {
+    const userEmail = req.user.email;
+
+    await db.collection('users').updateOne(
+      { email: userEmail },
+      { $unset: { twiliosms: '' } }
+    );
+
+    res.json({ success: true, message: 'Twilio SMS disconnected' });
+  } catch (error) {
+    console.error('Twilio SMS disconnect error:', error);
+    res.status(500).json({ error: 'Failed to disconnect Twilio SMS' });
+  }
+});
+
+app.use('/api/integrations/twiliosms', twilioSmsRouter);
+
+// Webhook integration routes
+const webhookRouter = express.Router();
+
+webhookRouter.get('/status', authenticateToken, async (req, res) => {
+  try {
+    const userEmail = req.user.email;
+    const user = await db.collection('users').findOne({ email: userEmail });
+
+    if (user?.webhook?.webhookUrl) {
+      return res.json({
+        connected: true,
+        webhook: user.webhook.webhookUrl,
+        method: user.webhook.method || 'POST'
+      });
+    }
+
+    res.json({ connected: false });
+  } catch (error) {
+    console.error('Webhook status error:', error);
+    res.status(500).json({ error: 'Failed to get Webhook status' });
+  }
+});
+
+webhookRouter.post('/connect', authenticateToken, async (req, res) => {
+  try {
+    const userEmail = req.user.email;
+    const { webhookUrl, method, headers } = req.body;
+
+    if (!webhookUrl) {
+      return res.status(400).json({ error: 'Webhook URL is required' });
+    }
+
+    // Validate URL format
+    try {
+      new URL(webhookUrl);
+    } catch (error) {
+      return res.status(400).json({ error: 'Invalid webhook URL format' });
+    }
+
+    const httpMethod = method || 'POST';
+    if (!['GET', 'POST', 'PUT', 'PATCH'].includes(httpMethod)) {
+      return res.status(400).json({ error: 'Invalid HTTP method. Must be GET, POST, PUT, or PATCH' });
+    }
+
+    // Test the webhook
+    try {
+      const testPayload = {
+        type: 'test',
+        message: 'Pingly Webhook integration test',
+        monitor: {
+          name: 'Test Monitor',
+          url: 'https://example.com',
+          status: 'down'
+        },
+        timestamp: new Date().toISOString()
+      };
+
+      const fetchOptions = {
+        method: httpMethod,
+        headers: {
+          'Content-Type': 'application/json',
+          'User-Agent': 'Pingly-Monitor/1.0',
+          ...(headers || {})
+        }
+      };
+
+      if (httpMethod !== 'GET') {
+        fetchOptions.body = JSON.stringify(testPayload);
+      }
+
+      const testResponse = await fetch(webhookUrl, fetchOptions);
+
+      if (!testResponse.ok && testResponse.status >= 500) {
+        return res.status(400).json({ error: 'Webhook endpoint returned server error' });
+      }
+    } catch (error) {
+      console.error('Webhook test error:', error);
+      return res.status(400).json({ error: 'Failed to connect to webhook URL' });
+    }
+
+    // Save webhook to user
+    await db.collection('users').updateOne(
+      { email: userEmail },
+      {
+        $set: {
+          webhook: {
+            webhookUrl,
+            method: httpMethod,
+            headers: headers || {},
+            connectedAt: new Date()
+          }
+        }
+      }
+    );
+
+    res.json({ success: true, message: 'Webhook connected' });
+  } catch (error) {
+    console.error('Webhook connect error:', error);
+    res.status(500).json({ error: 'Failed to connect webhook' });
+  }
+});
+
+webhookRouter.post('/disconnect', authenticateToken, async (req, res) => {
+  try {
+    const userEmail = req.user.email;
+
+    await db.collection('users').updateOne(
+      { email: userEmail },
+      { $unset: { webhook: '' } }
+    );
+
+    res.json({ success: true, message: 'Webhook disconnected' });
+  } catch (error) {
+    console.error('Webhook disconnect error:', error);
+    res.status(500).json({ error: 'Failed to disconnect webhook' });
+  }
+});
+
+app.use('/api/integrations/webhook', webhookRouter);
+
 // Test endpoint for Supabase OTP
 app.post('/api/test-otp', async (req, res) => {
   try {

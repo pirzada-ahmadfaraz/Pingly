@@ -380,6 +380,177 @@ async function sendTeamsNotification(webhookUrl, monitor, checkResult) {
   }
 }
 
+async function sendPagerDutyNotification(routingKey, monitor, checkResult) {
+  try {
+    const payload = {
+      routing_key: routingKey,
+      event_action: 'trigger',
+      payload: {
+        summary: `Monitor Down: ${monitor.name}`,
+        severity: 'critical',
+        source: 'pingly-monitoring',
+        custom_details: {
+          monitor_name: monitor.name,
+          status: 'DOWN',
+          url: monitor.url || monitor.ipAddress,
+          error: checkResult.errorMessage || 'Unknown error',
+          timestamp: new Date().toISOString()
+        }
+      }
+    };
+
+    const response = await fetch('https://events.pagerduty.com/v2/enqueue', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload)
+    });
+
+    if (!response.ok) {
+      console.error('Failed to send PagerDuty notification:', await response.text());
+    }
+  } catch (error) {
+    console.error('Error sending PagerDuty notification:', error);
+  }
+}
+
+async function sendGoogleChatNotification(webhookUrl, monitor, checkResult) {
+  try {
+    const message = {
+      cards: [
+        {
+          header: {
+            title: '🚨 Monitor Alert',
+            subtitle: 'Your monitor has gone down'
+          },
+          sections: [
+            {
+              widgets: [
+                {
+                  keyValue: {
+                    topLabel: 'Monitor',
+                    content: monitor.name
+                  }
+                },
+                {
+                  keyValue: {
+                    topLabel: 'Status',
+                    content: 'DOWN ❌'
+                  }
+                },
+                {
+                  keyValue: {
+                    topLabel: 'URL',
+                    content: monitor.url || monitor.ipAddress
+                  }
+                },
+                {
+                  keyValue: {
+                    topLabel: 'Error',
+                    content: checkResult.errorMessage || 'Unknown error'
+                  }
+                },
+                {
+                  keyValue: {
+                    topLabel: 'Time',
+                    content: new Date().toLocaleString()
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    };
+
+    const response = await fetch(webhookUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(message)
+    });
+
+    if (!response.ok) {
+      console.error('Failed to send Google Chat notification:', await response.text());
+    }
+  } catch (error) {
+    console.error('Error sending Google Chat notification:', error);
+  }
+}
+
+async function sendTwilioSmsNotification(twilioConfig, monitor, checkResult) {
+  try {
+    const { accountSid, authToken, phoneNumber, toNumber } = twilioConfig;
+
+    const message = `🚨 Pingly Alert: Monitor "${monitor.name}" is DOWN. URL: ${monitor.url || monitor.ipAddress}. Error: ${checkResult.errorMessage || 'Unknown error'}`;
+
+    const response = await fetch(
+      `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`,
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': 'Basic ' + Buffer.from(`${accountSid}:${authToken}`).toString('base64'),
+          'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        body: new URLSearchParams({
+          From: phoneNumber,
+          To: toNumber,
+          Body: message
+        })
+      }
+    );
+
+    if (!response.ok) {
+      console.error('Failed to send Twilio SMS notification:', await response.text());
+    }
+  } catch (error) {
+    console.error('Error sending Twilio SMS notification:', error);
+  }
+}
+
+async function sendWebhookNotification(webhookConfig, monitor, checkResult) {
+  try {
+    const { webhookUrl, method, headers } = webhookConfig;
+
+    const payload = {
+      type: 'monitor_down',
+      monitor: {
+        id: monitor._id.toString(),
+        name: monitor.name,
+        type: monitor.type,
+        url: monitor.url || monitor.ipAddress,
+        status: checkResult.status
+      },
+      error: checkResult.errorMessage || 'Unknown error',
+      responseTime: checkResult.responseTime,
+      timestamp: new Date().toISOString()
+    };
+
+    const fetchOptions = {
+      method: method || 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'User-Agent': 'Pingly-Monitor/1.0',
+        ...(headers || {})
+      }
+    };
+
+    if (method !== 'GET') {
+      fetchOptions.body = JSON.stringify(payload);
+    }
+
+    const response = await fetch(webhookUrl, fetchOptions);
+
+    if (!response.ok) {
+      console.error('Failed to send Webhook notification:', await response.text());
+    }
+  } catch (error) {
+    console.error('Error sending Webhook notification:', error);
+  }
+}
+
 /**
  * Send notification when monitor goes down
  */
@@ -429,6 +600,30 @@ Your monitor has gone down. Please check your service.
     if (user.teams?.webhookUrl) {
       await sendTeamsNotification(user.teams.webhookUrl, monitor, checkResult);
       console.log(`✅ Microsoft Teams notification sent`);
+    }
+
+    // Send PagerDuty notification if connected
+    if (user.pagerduty?.routingKey) {
+      await sendPagerDutyNotification(user.pagerduty.routingKey, monitor, checkResult);
+      console.log(`✅ PagerDuty notification sent`);
+    }
+
+    // Send Google Chat notification if connected
+    if (user.googlechat?.webhookUrl) {
+      await sendGoogleChatNotification(user.googlechat.webhookUrl, monitor, checkResult);
+      console.log(`✅ Google Chat notification sent`);
+    }
+
+    // Send Twilio SMS notification if connected
+    if (user.twiliosms?.accountSid && user.twiliosms?.authToken) {
+      await sendTwilioSmsNotification(user.twiliosms, monitor, checkResult);
+      console.log(`✅ Twilio SMS notification sent`);
+    }
+
+    // Send Webhook notification if connected
+    if (user.webhook?.webhookUrl) {
+      await sendWebhookNotification(user.webhook, monitor, checkResult);
+      console.log(`✅ Webhook notification sent`);
     }
 
     // TODO: Add email notifications here
