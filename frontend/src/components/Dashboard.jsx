@@ -42,6 +42,8 @@ const Dashboard = () => {
   const [twilioToNumber, setTwilioToNumber] = useState('');
   const [twilioConnected, setTwilioConnected] = useState(false);
   const [twilioLoading, setTwilioLoading] = useState(false);
+  const [twilioPhoneNumbers, setTwilioPhoneNumbers] = useState([]);
+  const [newPhoneNumber, setNewPhoneNumber] = useState('');
   const [webhookUrl, setWebhookUrl] = useState('');
   const [webhookMethod, setWebhookMethod] = useState('POST');
   const [webhookConnected, setWebhookConnected] = useState(false);
@@ -753,6 +755,38 @@ const Dashboard = () => {
   };
 
   // Twilio SMS handlers
+  const handleConnectTwilioApp = () => {
+    // Open Twilio Connect flow (placeholder for now)
+    showToast('Twilio Connect App integration coming soon');
+  };
+
+  const handleAddPhoneNumber = () => {
+    if (!newPhoneNumber) {
+      showToast('Please fill in this field.');
+      return;
+    }
+
+    const phoneRegex = /^\+[1-9]\d{1,14}$/;
+    if (!phoneRegex.test(newPhoneNumber)) {
+      showToast('Phone number must be in E.164 format (e.g., +1234567890)');
+      return;
+    }
+
+    if (twilioPhoneNumbers.includes(newPhoneNumber)) {
+      showToast('Phone number already added');
+      return;
+    }
+
+    setTwilioPhoneNumbers([...twilioPhoneNumbers, newPhoneNumber]);
+    setNewPhoneNumber('');
+    showToast('Phone number added successfully');
+  };
+
+  const handleRemovePhoneNumber = (phoneNumber) => {
+    setTwilioPhoneNumbers(twilioPhoneNumbers.filter(num => num !== phoneNumber));
+    showToast('Phone number removed');
+  };
+
   const handleConnectTwilioSms = async () => {
     if (!twilioAccountSid || !twilioAuthToken || !twilioFromNumber || !twilioToNumber) {
       showToast('Please fill in all Twilio SMS fields');
@@ -808,6 +842,7 @@ const Dashboard = () => {
         setTwilioAuthToken('');
         setTwilioFromNumber('');
         setTwilioToNumber('');
+        setTwilioPhoneNumbers([]);
         showToast('Twilio SMS notifications deactivated');
       }
     } catch (error) {
@@ -1395,158 +1430,131 @@ const Dashboard = () => {
                     </div>
                   </div>
                 ) : selectedIntegration === 'twiliosms' ? (
-                  <div className="bg-[#0f0f0f] border border-white/10 rounded-lg p-6">
-                    <p className="text-gray-400 mb-6">
-                      Twilio SMS allows you to receive text message alerts when your monitors go down.
-                    </p>
+                  <div className="bg-[#0f0f0f] border border-white/10 rounded-lg p-8">
+                    <h2 className="text-2xl font-bold text-white mb-6">Twilio SMS Notifications</h2>
 
-                    <div className="mb-6">
-                      <div className="mb-4">
-                        <div className="text-gray-300 font-medium mb-2">Current status:</div>
-                        <div className="text-gray-400">
-                          {twilioConnected ? 'Connected' : 'Not connected'}
-                        </div>
-                        {twilioConnected && (
-                          <div className="text-gray-400 text-sm mt-2">
-                            From: {twilioFromNumber} → To: {twilioToNumber}
-                          </div>
-                        )}
+                    <div className="bg-[#1a1a1a] border border-white/10 rounded-lg p-6 mb-6">
+                      <p className="text-gray-400 mb-6">
+                        Connect your Twilio account to enable SMS notifications. We will purchase a phone number on your behalf to send SMS messages. You can add as many numbers as you want to receive SMS notifications.
+                      </p>
+
+                      <div className="mb-6">
+                        <div className="text-lg font-semibold text-white mb-2">Current status: <span className="text-gray-400 font-normal">{twilioConnected ? 'Connected' : 'Not connected'}</span></div>
                       </div>
 
-                      {!twilioConnected ? (
-                        <div className="space-y-3">
-                          <input
-                            type="text"
-                            value={twilioAccountSid}
-                            onChange={(e) => setTwilioAccountSid(e.target.value)}
-                            placeholder="Account SID"
-                            className="w-full px-4 py-3 bg-transparent border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-red-500/50"
-                          />
-                          <input
-                            type="password"
-                            value={twilioAuthToken}
-                            onChange={(e) => setTwilioAuthToken(e.target.value)}
-                            placeholder="Auth Token"
-                            className="w-full px-4 py-3 bg-transparent border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-red-500/50"
-                          />
-                          <input
-                            type="text"
-                            value={twilioFromNumber}
-                            onChange={(e) => setTwilioFromNumber(e.target.value)}
-                            placeholder="From Number (e.g., +1234567890)"
-                            className="w-full px-4 py-3 bg-transparent border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-red-500/50"
-                          />
-                          <input
-                            type="text"
-                            value={twilioToNumber}
-                            onChange={(e) => setTwilioToNumber(e.target.value)}
-                            placeholder="To Number (e.g., +1234567890)"
-                            className="w-full px-4 py-3 bg-transparent border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-red-500/50"
-                          />
-                          <button
-                            onClick={handleConnectTwilioSms}
-                            disabled={twilioLoading}
-                            className="w-full px-6 py-3 bg-red-600 hover:bg-red-700 disabled:bg-gray-600 text-white rounded-lg font-medium transition-colors"
-                          >
-                            {twilioLoading ? 'Connecting...' : 'Connect Twilio SMS'}
-                          </button>
-                        </div>
-                      ) : (
+                      {!twilioConnected && (
                         <button
-                          onClick={handleDisconnectTwilioSms}
-                          className="px-6 py-3 bg-red-500 hover:bg-red-600 text-white rounded-lg font-medium transition-colors"
+                          onClick={handleConnectTwilioApp}
+                          className="px-6 py-3 bg-[#F22F46] hover:bg-[#d62839] text-white rounded-lg font-medium transition-colors flex items-center gap-2"
                         >
-                          Disconnect
+                          <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                            <circle cx="12" cy="12" r="10" />
+                            <path fill="#F22F46" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"/>
+                            <path fill="white" d="M12 7a5 5 0 100 10 5 5 0 000-10z"/>
+                          </svg>
+                          Twilio Connect App
                         </button>
                       )}
                     </div>
 
+                    <div className="mb-6">
+                      <h3 className="text-xl font-semibold text-white mb-4">Phone Numbers</h3>
+
+                      {twilioPhoneNumbers.length === 0 ? (
+                        <div className="text-gray-400 mb-4">No Numbers</div>
+                      ) : (
+                        <div className="space-y-2 mb-4">
+                          {twilioPhoneNumbers.map((number, index) => (
+                            <div key={index} className="flex items-center justify-between bg-[#1a1a1a] border border-white/10 rounded-lg p-3">
+                              <span className="text-white">{number}</span>
+                              <button
+                                onClick={() => handleRemovePhoneNumber(number)}
+                                className="text-red-400 hover:text-red-300 text-sm"
+                              >
+                                Remove
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      <div className="flex gap-3">
+                        <input
+                          type="text"
+                          value={newPhoneNumber}
+                          onChange={(e) => setNewPhoneNumber(e.target.value)}
+                          placeholder="+1 Enter phone number"
+                          className="flex-1 px-4 py-3 bg-transparent border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-blue-500/50"
+                        />
+                        <button
+                          onClick={handleAddPhoneNumber}
+                          className="px-6 py-3 bg-[#5865F2] hover:bg-[#4752C4] text-white rounded-lg font-medium transition-colors"
+                        >
+                          Add Phone Number
+                        </button>
+                      </div>
+                    </div>
+
                     <div className="bg-[#1a1a1a] border border-white/10 rounded-lg p-4">
+                      <p className="text-gray-400 text-sm mb-2">
+                        <strong>NOTE:</strong> Please do not connect and disconnect multiple times, as Twilio will charge everytime when you buy phone number.
+                      </p>
                       <p className="text-gray-400 text-sm">
-                        Get your credentials from{' '}
+                        For more details, visit{' '}
                         <a
-                          href="https://console.twilio.com"
+                          href="https://www.twilio.com/docs/sms"
                           target="_blank"
                           rel="noopener noreferrer"
                           className="text-blue-400 hover:text-blue-300 underline"
                         >
-                          Twilio Console
+                          Twilio SMS Notifications
                         </a>
                       </p>
                     </div>
                   </div>
                 ) : selectedIntegration === 'webhook' ? (
-                  <div className="bg-[#0f0f0f] border border-white/10 rounded-lg p-6">
-                    <p className="text-gray-400 mb-6">
-                      Send custom webhook notifications to any HTTP endpoint when your monitors go down.
-                    </p>
+                  <div className="bg-[#0f0f0f] border border-white/10 rounded-lg p-8">
+                    <h2 className="text-2xl font-bold text-white mb-6">Webhook Notifications</h2>
 
-                    <div className="mb-6">
-                      <div className="mb-4">
-                        <div className="text-gray-300 font-medium mb-2">Current status:</div>
-                        <div className="text-gray-400">
-                          {webhookConnected ? 'Connected' : 'Not connected'}
-                        </div>
-                        {webhookConnected && (
-                          <div className="text-gray-400 text-sm mt-2 break-all">
-                            {webhookMethod} {webhookUrl}
-                          </div>
-                        )}
+                    <div className="bg-[#1a1a1a] border border-white/10 rounded-lg p-6 mb-6">
+                      <p className="text-gray-400 mb-6">
+                        To receive webhook notifications, provide a webhook URL. We'll send POST requests to this URL.
+                      </p>
+
+                      <div className="mb-6">
+                        <div className="text-lg font-semibold text-white mb-2">Current status: <span className="text-gray-400 font-normal">{webhookConnected ? 'Connected' : 'Not connected'}</span></div>
                       </div>
 
                       {!webhookConnected ? (
-                        <div className="space-y-3">
+                        <div className="flex gap-3">
                           <input
                             type="text"
                             value={webhookUrl}
                             onChange={(e) => setWebhookUrl(e.target.value)}
                             placeholder="Enter webhook URL"
-                            className="w-full px-4 py-3 bg-transparent border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-blue-500/50"
+                            className="flex-1 px-4 py-3 bg-transparent border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-blue-500/50"
                           />
-                          <select
-                            value={webhookMethod}
-                            onChange={(e) => setWebhookMethod(e.target.value)}
-                            className="w-full px-4 py-3 bg-[#1a1a1a] border border-white/10 rounded-lg text-white focus:outline-none focus:border-blue-500/50"
-                          >
-                            <option value="POST">POST</option>
-                            <option value="GET">GET</option>
-                            <option value="PUT">PUT</option>
-                            <option value="PATCH">PATCH</option>
-                          </select>
                           <button
                             onClick={handleConnectWebhook}
                             disabled={webhookLoading}
-                            className="w-full px-6 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 text-white rounded-lg font-medium transition-colors"
+                            className="px-6 py-3 bg-[#5865F2] hover:bg-[#4752C4] disabled:bg-gray-600 text-white rounded-lg font-medium transition-colors"
                           >
-                            {webhookLoading ? 'Connecting...' : 'Connect Webhook'}
+                            {webhookLoading ? 'Adding...' : 'Add Webhook URL'}
                           </button>
                         </div>
                       ) : (
-                        <button
-                          onClick={handleDisconnectWebhook}
-                          className="px-6 py-3 bg-red-500 hover:bg-red-600 text-white rounded-lg font-medium transition-colors"
-                        >
-                          Remove
-                        </button>
+                        <div className="space-y-4">
+                          <div className="text-gray-400 text-sm break-all">
+                            Connected to: {webhookUrl}
+                          </div>
+                          <button
+                            onClick={handleDisconnectWebhook}
+                            className="px-6 py-3 bg-red-500 hover:bg-red-600 text-white rounded-lg font-medium transition-colors"
+                          >
+                            Remove
+                          </button>
+                        </div>
                       )}
-                    </div>
-
-                    <div className="bg-[#1a1a1a] border border-white/10 rounded-lg p-4">
-                      <p className="text-gray-400 text-sm mb-2">
-                        The webhook will receive a JSON payload with monitor details:
-                      </p>
-                      <pre className="text-xs text-gray-500 overflow-x-auto">
-{`{
-  "type": "monitor_down",
-  "monitor": {
-    "name": "Example Monitor",
-    "url": "https://example.com",
-    "status": "down"
-  },
-  "error": "Connection timeout",
-  "timestamp": "2024-01-01T00:00:00.000Z"
-}`}
-                      </pre>
                     </div>
                   </div>
                 ) : (
