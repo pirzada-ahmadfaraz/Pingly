@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { LayoutGrid, AlertCircle, FileText, Zap, Users, Settings, ChevronRight, Lock } from 'lucide-react';
+import { LayoutGrid, AlertCircle, FileText, Zap, Users, Settings, ChevronRight, Lock, Mail, Send, MessageCircle, Slack, MessageSquare, Bell, Phone, Webhook } from 'lucide-react';
 
 const CreatePingMonitor = () => {
   const navigate = useNavigate();
@@ -11,6 +11,7 @@ const CreatePingMonitor = () => {
     locations: ['europe-west'],
     notifyOnFailure: true,
   });
+  const [connectedIntegrations, setConnectedIntegrations] = useState([]);
 
   const menuItems = [
     { id: 'monitors', label: 'Monitors', icon: LayoutGrid },
@@ -20,6 +21,56 @@ const CreatePingMonitor = () => {
     { id: 'users', label: 'Users', icon: Users },
     { id: 'settings', label: 'Settings', icon: Settings },
   ];
+
+  const allIntegrations = [
+    { id: 'email', name: 'Email', icon: Mail, color: 'text-cyan-400' },
+    { id: 'telegram', name: 'Telegram', icon: Send, color: 'text-blue-400' },
+    { id: 'discord', name: 'Discord', icon: MessageCircle, color: 'text-indigo-400' },
+    { id: 'slack', name: 'Slack', icon: Slack, color: 'text-pink-400' },
+    { id: 'teams', name: 'Teams', icon: MessageSquare, color: 'text-blue-500' },
+    { id: 'pagerduty', name: 'PagerDuty', icon: Bell, color: 'text-green-400' },
+    { id: 'googlechat', name: 'Google Chat', icon: MessageSquare, color: 'text-green-500' },
+    { id: 'twiliosms', name: 'Twilio SMS', icon: Phone, color: 'text-red-400' },
+    { id: 'webhook', name: 'Webhook', icon: Webhook, color: 'text-blue-300' },
+  ];
+
+  useEffect(() => {
+    const fetchIntegrations = async () => {
+      const token = localStorage.getItem('auth_token');
+      if (!token) return;
+
+      const integrationChecks = [
+        { id: 'telegram', endpoint: '/api/integrations/telegram/status' },
+        { id: 'discord', endpoint: '/api/integrations/discord/status' },
+        { id: 'slack', endpoint: '/api/integrations/slack/status' },
+        { id: 'teams', endpoint: '/api/integrations/teams/status' },
+        { id: 'pagerduty', endpoint: '/api/integrations/pagerduty/status' },
+        { id: 'googlechat', endpoint: '/api/integrations/googlechat/status' },
+        { id: 'twiliosms', endpoint: '/api/integrations/twiliosms/status' },
+        { id: 'webhook', endpoint: '/api/integrations/webhook/status' },
+      ];
+
+      const connected = [];
+
+      for (const integration of integrationChecks) {
+        try {
+          const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}${integration.endpoint}`, {
+            headers: { 'Authorization': `Bearer ${token}` },
+          });
+          const data = await response.json();
+          if (response.ok && data.connected) {
+            connected.push(integration.id);
+          }
+        } catch (error) {
+          console.error(`Error checking ${integration.id}:`, error);
+        }
+      }
+
+      setConnectedIntegrations(connected);
+    };
+
+    fetchIntegrations();
+  }, []);
 
   const handleInputChange = (field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -294,7 +345,7 @@ const CreatePingMonitor = () => {
             <h2 className="text-base font-bold mb-1">Notification Settings</h2>
             <p className="text-gray-400 text-xs mb-3">Configure how you want to be notified.</p>
 
-            <div>
+            <div className="mb-4">
               <label className="block text-white text-sm font-medium mb-2">Notify on Failure</label>
               <label className="flex items-center gap-2 px-3 py-2 rounded-lg border bg-green-500/10 border-green-500 w-fit cursor-pointer">
                 <input
@@ -317,6 +368,40 @@ const CreatePingMonitor = () => {
                 <span className="text-xs text-white">Notify via email on failure</span>
               </label>
             </div>
+
+            {/* Connected Integrations Display */}
+            <div className="mb-4">
+              <label className="block text-white text-sm font-medium mb-2">Connected Integrations</label>
+              {connectedIntegrations.length === 0 ? (
+                <p className="text-gray-500 text-xs">No integrations connected yet</p>
+              ) : (
+                <div className="flex flex-wrap gap-2">
+                  {connectedIntegrations.map(integrationId => {
+                    const integration = allIntegrations.find(i => i.id === integrationId);
+                    if (!integration) return null;
+                    const Icon = integration.icon;
+                    return (
+                      <div
+                        key={integration.id}
+                        className="flex items-center gap-2 px-3 py-2 bg-[#1a1a1a] border border-white/10 rounded-lg"
+                      >
+                        <Icon className={`w-4 h-4 ${integration.color}`} />
+                        <span className="text-xs text-white">{integration.name}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Configure Integrations Button */}
+            <button
+              onClick={() => navigate('/dashboard', { state: { activeTab: 'integrations' } })}
+              className="w-full px-4 py-2 bg-[#1a1a1a] hover:bg-[#252525] border border-white/10 rounded-lg text-white text-sm font-medium transition-colors flex items-center justify-center gap-2"
+            >
+              <Zap className="w-4 h-4" />
+              Configure Integrations
+            </button>
           </div>
 
           {/* Submit Button */}
