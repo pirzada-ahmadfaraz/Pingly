@@ -275,10 +275,15 @@ const MonitorDetail = () => {
   };
 
   const handleAddIntegration = async (integrationId) => {
+    console.log('Adding integration:', integrationId);
     const token = localStorage.getItem('auth_token');
-    if (!token) return;
+    if (!token) {
+      console.error('No auth token found');
+      return;
+    }
 
     const newIntegrations = [...monitorIntegrations, integrationId];
+    console.log('New integrations array:', newIntegrations);
 
     try {
       const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/monitors/${id}/integrations`, {
@@ -291,22 +296,33 @@ const MonitorDetail = () => {
       });
 
       const data = await response.json();
+      console.log('Response:', response.status, data);
 
       if (response.ok) {
         setMonitorIntegrations(data.integrations);
         setShowIntegrationDropdown(false);
         setSearchQuery('');
+        console.log('Integration added successfully');
+      } else {
+        console.error('Failed to add integration:', data);
+        alert(`Failed to add integration: ${data.error || 'Unknown error'}`);
       }
     } catch (error) {
       console.error('Error adding integration:', error);
+      alert('Error adding integration. Please try again.');
     }
   };
 
   const handleRemoveIntegration = async (integrationId) => {
+    console.log('Removing integration:', integrationId);
     const token = localStorage.getItem('auth_token');
-    if (!token) return;
+    if (!token) {
+      console.error('No auth token found');
+      return;
+    }
 
     const newIntegrations = monitorIntegrations.filter(id => id !== integrationId);
+    console.log('New integrations array:', newIntegrations);
 
     try {
       const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/monitors/${id}/integrations`, {
@@ -319,18 +335,28 @@ const MonitorDetail = () => {
       });
 
       const data = await response.json();
+      console.log('Response:', response.status, data);
 
       if (response.ok) {
         setMonitorIntegrations(data.integrations);
+        console.log('Integration removed successfully');
+      } else {
+        console.error('Failed to remove integration:', data);
+        alert(`Failed to remove integration: ${data.error || 'Unknown error'}`);
       }
     } catch (error) {
       console.error('Error removing integration:', error);
+      alert('Error removing integration. Please try again.');
     }
   };
 
   const handleAddAll = async () => {
+    console.log('Adding all integrations:', connectedIntegrations);
     const token = localStorage.getItem('auth_token');
-    if (!token) return;
+    if (!token) {
+      console.error('No auth token found');
+      return;
+    }
 
     try {
       const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/monitors/${id}/integrations`, {
@@ -343,12 +369,18 @@ const MonitorDetail = () => {
       });
 
       const data = await response.json();
+      console.log('Response:', response.status, data);
 
       if (response.ok) {
         setMonitorIntegrations(data.integrations);
+        console.log('All integrations added successfully');
+      } else {
+        console.error('Failed to add all integrations:', data);
+        alert(`Failed to add all integrations: ${data.error || 'Unknown error'}`);
       }
     } catch (error) {
       console.error('Error adding all integrations:', error);
+      alert('Error adding all integrations. Please try again.');
     }
   };
 
