@@ -23,6 +23,7 @@ const MonitorDetail = () => {
     locations: []
   });
   const [showAdvancedSettings, setShowAdvancedSettings] = useState(false);
+  const [toast, setToast] = useState({ show: false, message: '' });
 
   const menuItems = [
     { id: 'monitors', label: 'Monitors', icon: LayoutGrid },
@@ -44,6 +45,14 @@ const MonitorDetail = () => {
     { id: 'twiliosms', name: 'Twilio SMS', icon: Phone, color: 'text-red-400', description: 'Sending SMS via Twilio' },
     { id: 'webhook', name: 'Webhook', icon: Webhook, color: 'text-blue-300', description: 'Sending webhook notification' },
   ];
+
+  // Toast notification handler
+  const showToast = (message) => {
+    setToast({ show: true, message });
+    setTimeout(() => {
+      setToast({ show: false, message: '' });
+    }, 3000);
+  };
 
   // Fetch connected user integrations
   useEffect(() => {
@@ -324,13 +333,14 @@ const MonitorDetail = () => {
         setShowIntegrationDropdown(false);
         setSearchQuery('');
         console.log('Integration added successfully');
+        showToast('Integration added successfully');
       } else {
         console.error('Failed to add integration:', data);
-        alert(`Failed to add integration: ${data.error || 'Unknown error'}`);
+        showToast(`Failed to add integration: ${data.error || 'Unknown error'}`);
       }
     } catch (error) {
       console.error('Error adding integration:', error);
-      alert('Error adding integration. Please try again.');
+      showToast('Error adding integration. Please try again.');
     }
   };
 
@@ -361,13 +371,14 @@ const MonitorDetail = () => {
       if (response.ok) {
         setMonitorIntegrations(data.integrations);
         console.log('Integration removed successfully');
+        showToast('Integration removed successfully');
       } else {
         console.error('Failed to remove integration:', data);
-        alert(`Failed to remove integration: ${data.error || 'Unknown error'}`);
+        showToast(`Failed to remove integration: ${data.error || 'Unknown error'}`);
       }
     } catch (error) {
       console.error('Error removing integration:', error);
-      alert('Error removing integration. Please try again.');
+      showToast('Error removing integration. Please try again.');
     }
   };
 
@@ -395,13 +406,14 @@ const MonitorDetail = () => {
       if (response.ok) {
         setMonitorIntegrations(data.integrations);
         console.log('All integrations added successfully');
+        showToast('All integrations added successfully');
       } else {
         console.error('Failed to add all integrations:', data);
-        alert(`Failed to add all integrations: ${data.error || 'Unknown error'}`);
+        showToast(`Failed to add all integrations: ${data.error || 'Unknown error'}`);
       }
     } catch (error) {
       console.error('Error adding all integrations:', error);
-      alert('Error adding all integrations. Please try again.');
+      showToast('Error adding all integrations. Please try again.');
     }
   };
 
@@ -411,7 +423,7 @@ const MonitorDetail = () => {
 
     // Validate required fields - only name can be edited
     if (!editedMonitor.name) {
-      alert('Please provide a monitor name');
+      showToast('Please provide a monitor name');
       return;
     }
 
@@ -432,13 +444,13 @@ const MonitorDetail = () => {
 
       if (response.ok) {
         setMonitor(data.monitor);
-        alert('Monitor updated successfully!');
+        showToast('Monitor updated successfully!');
       } else {
-        alert(`Failed to update monitor: ${data.error || 'Unknown error'}`);
+        showToast(`Failed to update monitor: ${data.error || 'Unknown error'}`);
       }
     } catch (error) {
       console.error('Error updating monitor:', error);
-      alert('Error updating monitor. Please try again.');
+      showToast('Error updating monitor. Please try again.');
     }
   };
 
@@ -1128,6 +1140,13 @@ const MonitorDetail = () => {
           </div>
         )}
       </main>
+
+      {/* Toast Notification */}
+      {toast.show && (
+        <div className="fixed bottom-8 right-8 bg-[#1a1a1a] border border-white/10 rounded-lg px-6 py-4 shadow-2xl animate-slide-up z-50">
+          <p className="text-white text-sm">{toast.message}</p>
+        </div>
+      )}
     </div>
   );
 };
