@@ -409,14 +409,9 @@ const MonitorDetail = () => {
     const token = localStorage.getItem('auth_token');
     if (!token) return;
 
-    // Validate required fields
-    if (!editedMonitor.name || (!editedMonitor.url && !editedMonitor.ipAddress)) {
-      alert('Please fill in all required fields');
-      return;
-    }
-
-    if (editedMonitor.locations.length === 0) {
-      alert('Please select at least one location');
+    // Validate required fields - only name can be edited
+    if (!editedMonitor.name) {
+      alert('Please provide a monitor name');
       return;
     }
 
@@ -429,10 +424,7 @@ const MonitorDetail = () => {
         },
         body: JSON.stringify({
           name: editedMonitor.name,
-          url: editedMonitor.url,
-          ipAddress: editedMonitor.ipAddress,
           frequency: editedMonitor.frequency,
-          locations: editedMonitor.locations,
         }),
       });
 
@@ -978,69 +970,63 @@ const MonitorDetail = () => {
 
         {/* Settings Tab */}
         {activeTab === 'settings' && (
-          <div className="space-y-6">
+          <div className="space-y-4">
             {/* Your Monitor Section */}
-            <div className="bg-[#0f0f0f] border border-white/10 rounded-lg p-6">
-              <h3 className="text-xl font-bold mb-2">Your Monitor</h3>
-              <p className="text-gray-400 text-sm mb-6">Information we need to start monitoring your url.</p>
+            <div className="bg-[#0f0f0f] border border-white/10 rounded-lg p-4">
+              <h3 className="text-lg font-bold mb-1">Your Monitor</h3>
+              <p className="text-gray-400 text-xs mb-4">Information we need to start monitoring your url.</p>
 
-              <div className="grid grid-cols-2 gap-6">
+              <div className="grid grid-cols-2 gap-4">
                 {/* Name Field */}
                 <div>
-                  <label className="block text-white font-medium mb-2">Name</label>
+                  <label className="block text-white text-sm font-medium mb-1.5">Name</label>
                   <input
                     type="text"
                     value={editedMonitor.name}
                     onChange={(e) => setEditedMonitor({ ...editedMonitor, name: e.target.value })}
                     placeholder="Name of your monitor"
-                    className="w-full px-4 py-3 bg-[#1a1a1a] border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-green-500/50"
+                    className="w-full px-3 py-2 text-sm bg-[#1a1a1a] border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-green-500/50"
                   />
-                  <p className="text-gray-500 text-xs mt-2">Name of your monitor</p>
+                  <p className="text-gray-500 text-xs mt-1">Name of your monitor</p>
                 </div>
 
-                {/* URL Field */}
+                {/* URL Field - Locked */}
                 <div>
-                  <label className="block text-white font-medium mb-2">URL</label>
+                  <label className="block text-white text-sm font-medium mb-1.5">URL</label>
                   <input
                     type="text"
                     value={monitor?.type === 'http' ? editedMonitor.url : editedMonitor.ipAddress}
-                    onChange={(e) => {
-                      if (monitor?.type === 'http') {
-                        setEditedMonitor({ ...editedMonitor, url: e.target.value });
-                      } else {
-                        setEditedMonitor({ ...editedMonitor, ipAddress: e.target.value });
-                      }
-                    }}
+                    disabled
                     placeholder={monitor?.type === 'http' ? 'https://example.com' : 'IP Address'}
-                    className="w-full px-4 py-3 bg-[#1a1a1a] border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-green-500/50"
+                    className="w-full px-3 py-2 text-sm bg-[#0a0a0a] border border-white/10 rounded-lg text-gray-500 placeholder-gray-600 cursor-not-allowed"
                   />
-                  <p className="text-gray-500 text-xs mt-2">
-                    {monitor?.type === 'http' ? 'URL to monitor should start with http or https' : 'IP address to ping'}
+                  <p className="text-gray-500 text-xs mt-1">
+                    {monitor?.type === 'http' ? 'URL cannot be changed' : 'IP address cannot be changed'}
                   </p>
                 </div>
               </div>
             </div>
 
             {/* Frequency Section */}
-            <div className="bg-[#0f0f0f] border border-white/10 rounded-lg p-6">
-              <div className="flex items-start justify-between mb-4">
-                <h3 className="text-xl font-bold">Frequency</h3>
-                <div className="flex items-center gap-2 text-sm">
+            <div className="bg-[#0f0f0f] border border-white/10 rounded-lg p-4">
+              <div className="flex items-start justify-between mb-3">
+                <h3 className="text-lg font-bold">Frequency</h3>
+                <div className="flex items-center gap-2 text-xs">
                   <span className="text-gray-400">🔒 1 min freq available in paid plans</span>
                   <a href="#" className="text-green-500 hover:text-green-400">Upgrade now</a>
                 </div>
               </div>
 
-              <div className="flex gap-4 mb-3">
+              <div className="flex gap-3 mb-2">
                 <button
                   disabled
-                  className="px-6 py-3 bg-[#1a1a1a] border border-white/10 rounded-lg text-gray-500 cursor-not-allowed"
+                  className="px-5 py-2 text-sm bg-[#1a1a1a] border border-white/10 rounded-lg text-gray-500 cursor-not-allowed"
                 >
                   1 Min
                 </button>
                 <button
                   onClick={() => setEditedMonitor({ ...editedMonitor, frequency: '5min' })}
-                  className={`px-6 py-3 border rounded-lg transition-colors ${
+                  className={`px-5 py-2 text-sm border rounded-lg transition-colors ${
                     editedMonitor.frequency === '5min'
                       ? 'bg-white text-black border-white'
                       : 'bg-[#1a1a1a] border-white/10 text-white hover:bg-[#252525]'
@@ -1050,7 +1036,7 @@ const MonitorDetail = () => {
                 </button>
                 <button
                   onClick={() => setEditedMonitor({ ...editedMonitor, frequency: '10min' })}
-                  className={`px-6 py-3 border rounded-lg transition-colors ${
+                  className={`px-5 py-2 text-sm border rounded-lg transition-colors ${
                     editedMonitor.frequency === '10min'
                       ? 'bg-white text-black border-white'
                       : 'bg-[#1a1a1a] border-white/10 text-white hover:bg-[#252525]'
@@ -1059,22 +1045,22 @@ const MonitorDetail = () => {
                   10 min
                 </button>
               </div>
-              <p className="text-gray-500 text-sm">Frequency for checking url</p>
+              <p className="text-gray-500 text-xs">Frequency for checking url</p>
             </div>
 
-            {/* Monitor Location Section */}
-            <div className="bg-[#0f0f0f] border border-white/10 rounded-lg p-6">
-              <div className="flex items-start justify-between mb-4">
-                <h3 className="text-xl font-bold">Monitor Location</h3>
-                <div className="flex items-center gap-2 text-sm">
+            {/* Monitor Location Section - Disabled */}
+            <div className="bg-[#0f0f0f] border border-white/10 rounded-lg p-4">
+              <div className="flex items-start justify-between mb-3">
+                <h3 className="text-lg font-bold">Monitor Location</h3>
+                <div className="flex items-center gap-2 text-xs">
                   <span className="text-gray-400">🔒 Multi location checks available in paid plans</span>
                   <a href="#" className="text-green-500 hover:text-green-400">Upgrade now</a>
                 </div>
               </div>
 
-              <p className="text-gray-400 text-sm mb-4">Select the locations from which you want to check the monitor</p>
+              <p className="text-gray-400 text-xs mb-3">Select the locations from which you want to check the monitor</p>
 
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-3 gap-3">
                 {[
                   { id: 'north-america-west', label: 'North America (West)' },
                   { id: 'north-america-east', label: 'North America (East)' },
@@ -1085,47 +1071,46 @@ const MonitorDetail = () => {
                 ].map((location) => (
                   <label
                     key={location.id}
-                    className="flex items-center gap-3 cursor-pointer"
+                    className="flex items-center gap-2 cursor-not-allowed opacity-50"
                   >
                     <div
-                      onClick={() => toggleLocation(location.id)}
-                      className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
+                      className={`w-4 h-4 rounded border-2 flex items-center justify-center ${
                         editedMonitor.locations.includes(location.id)
                           ? 'bg-green-500 border-green-500'
                           : 'border-gray-500'
                       }`}
                     >
                       {editedMonitor.locations.includes(location.id) && (
-                        <svg className="w-3 h-3 text-white" viewBox="0 0 12 12" fill="none">
+                        <svg className="w-2.5 h-2.5 text-white" viewBox="0 0 12 12" fill="none">
                           <path d="M10 3L4.5 8.5L2 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                         </svg>
                       )}
                     </div>
-                    <span className="text-white">{location.label}</span>
+                    <span className="text-white text-sm">{location.label}</span>
                   </label>
                 ))}
               </div>
             </div>
 
             {/* Advanced Settings Section */}
-            <div className="bg-[#0f0f0f] border border-white/10 rounded-lg p-6">
+            <div className="bg-[#0f0f0f] border border-white/10 rounded-lg p-4">
               <div className="flex items-center justify-between">
                 <button
                   onClick={() => setShowAdvancedSettings(!showAdvancedSettings)}
-                  className="flex items-center gap-2 text-xl font-bold hover:text-gray-300 transition-colors"
+                  className="flex items-center gap-2 text-lg font-bold hover:text-gray-300 transition-colors"
                 >
                   <span>Advance Settings</span>
-                  <span className="text-2xl">{showAdvancedSettings ? '−' : '+'}</span>
+                  <span className="text-xl">{showAdvancedSettings ? '−' : '+'}</span>
                 </button>
-                <div className="flex items-center gap-2 text-sm">
+                <div className="flex items-center gap-2 text-xs">
                   <span className="text-gray-400">🔒 Available in paid plans</span>
                   <a href="#" className="text-green-500 hover:text-green-400">Upgrade now</a>
                 </div>
               </div>
 
               {showAdvancedSettings && (
-                <div className="mt-6 pt-6 border-t border-white/10">
-                  <p className="text-gray-400">Advanced settings will be available in paid plans.</p>
+                <div className="mt-4 pt-4 border-t border-white/10">
+                  <p className="text-gray-400 text-sm">Advanced settings will be available in paid plans.</p>
                 </div>
               )}
             </div>
@@ -1134,10 +1119,10 @@ const MonitorDetail = () => {
             <div className="flex justify-end">
               <button
                 onClick={handleUpdateMonitor}
-                className="px-8 py-3 bg-green-500 hover:bg-green-600 text-white rounded-lg font-medium transition-colors flex items-center gap-2"
+                className="px-6 py-2.5 text-sm bg-green-500 hover:bg-green-600 text-white rounded-lg font-medium transition-colors flex items-center gap-2"
               >
                 <span>Update Monitor</span>
-                <ChevronRight className="w-5 h-5" />
+                <ChevronRight className="w-4 h-4" />
               </button>
             </div>
           </div>
