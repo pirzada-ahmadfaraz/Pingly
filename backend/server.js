@@ -1148,6 +1148,92 @@ webhookRouter.post('/disconnect', authenticateToken, async (req, res) => {
 
 app.use('/api/integrations/webhook', webhookRouter);
 
+// Monitor-specific integration routes
+app.get('/api/monitors/:monitorId/integrations', authenticateToken, async (req, res) => {
+  try {
+    const { monitorId } = req.params;
+    const userEmail = req.user.email;
+
+    const monitor = await db.collection('monitors').findOne({
+      _id: new ObjectId(monitorId)
+    });
+
+    if (!monitor) {
+      return res.status(404).json({ error: 'Monitor not found' });
+    }
+
+    // Verify user owns this monitor
+    const user = await db.collection('users').findOne({ email: userEmail });
+    if (!user || monitor.userId.toString() !== user._id.toString()) {
+      return res.status(403).json({ error: 'Unauthorized' });
+    }
+
+    res.json({
+      integrations: monitor.integrations || []
+    });
+  } catch (error) {
+    console.error('Error getting monitor integrations:', error);
+    res.status(500).json({ error: 'Failed to get monitor integrations' });
+  }
+});
+
+app.post('/api/monitors/:monitorId/integrations', authenticateToken, async (req, res) => {
+  try {
+    const { monitorId } = req.params;
+    const { integrations } = req.body;
+    const userEmail = req.user.email;
+
+    const monitor = await db.collection('monitors').findOne({
+      _id: new ObjectId(monitorId)
+    });
+
+    if (!monitor) {
+      return res.status(404).json({ error: 'Monitor not found' });
+    }
+
+    // Verify user owns this monitor
+    const user = await db.collection('users').findOne({ email: userEmail });
+    if (!user || monitor.userId.toString() !== user._id.toString()) {
+      return res.status(403).json({ error: 'Unauthorized' });
+    }
+
+    // Verify user has these integrations connected
+    const userConnectedIntegrations = [];
+    if (user.telegram?.chatId) userConnectedIntegrations.push('telegram');
+    if (user.discord?.webhookUrl) userConnectedIntegrations.push('discord');
+    if (user.slack?.webhookUrl) userConnectedIntegrations.push('slack');
+    if (user.teams?.webhookUrl) userConnectedIntegrations.push('teams');
+    if (user.pagerduty?.routingKey) userConnectedIntegrations.push('pagerduty');
+    if (user.googlechat?.webhookUrl) userConnectedIntegrations.push('googlechat');
+    if (user.twiliosms?.accountSid) userConnectedIntegrations.push('twiliosms');
+    if (user.webhook?.webhookUrl) userConnectedIntegrations.push('webhook');
+
+    // Filter to only include integrations the user has connected
+    const validIntegrations = integrations.filter(int =>
+      userConnectedIntegrations.includes(int)
+    );
+
+    // Update monitor with integrations
+    await db.collection('monitors').updateOne(
+      { _id: new ObjectId(monitorId) },
+      {
+        $set: {
+          integrations: validIntegrations,
+          updatedAt: new Date()
+        }
+      }
+    );
+
+    res.json({
+      success: true,
+      integrations: validIntegrations
+    });
+  } catch (error) {
+    console.error('Error updating monitor integrations:', error);
+    res.status(500).json({ error: 'Failed to update monitor integrations' });
+  }
+});
+
 // Test endpoint for Supabase OTP
 app.post('/api/test-otp', async (req, res) => {
   try {

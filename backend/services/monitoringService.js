@@ -566,8 +566,21 @@ export async function sendNotification(db, monitor, checkResult) {
       return;
     }
 
-    // Send Telegram notification if connected
-    if (user.telegram?.chatId) {
+    // Get monitor-specific integrations (if configured)
+    const monitorIntegrations = monitor.integrations || [];
+
+    // Helper function to check if integration should be used
+    const shouldUseIntegration = (integrationId) => {
+      // If monitor has specific integrations configured, only use those
+      if (monitorIntegrations.length > 0) {
+        return monitorIntegrations.includes(integrationId);
+      }
+      // Otherwise, use all connected integrations (backward compatibility)
+      return true;
+    };
+
+    // Send Telegram notification if connected and enabled for this monitor
+    if (user.telegram?.chatId && shouldUseIntegration('telegram')) {
       const message = `
 🚨 <b>Monitor Alert</b>
 
@@ -584,44 +597,44 @@ Your monitor has gone down. Please check your service.
       console.log(`✅ Telegram notification sent to @${user.telegram.username}`);
     }
 
-    // Send Discord notification if connected
-    if (user.discord?.webhookUrl) {
+    // Send Discord notification if connected and enabled for this monitor
+    if (user.discord?.webhookUrl && shouldUseIntegration('discord')) {
       await sendDiscordNotification(user.discord.webhookUrl, monitor, checkResult);
       console.log(`✅ Discord notification sent`);
     }
 
-    // Send Slack notification if connected
-    if (user.slack?.webhookUrl) {
+    // Send Slack notification if connected and enabled for this monitor
+    if (user.slack?.webhookUrl && shouldUseIntegration('slack')) {
       await sendSlackNotification(user.slack.webhookUrl, monitor, checkResult);
       console.log(`✅ Slack notification sent`);
     }
 
-    // Send Teams notification if connected
-    if (user.teams?.webhookUrl) {
+    // Send Teams notification if connected and enabled for this monitor
+    if (user.teams?.webhookUrl && shouldUseIntegration('teams')) {
       await sendTeamsNotification(user.teams.webhookUrl, monitor, checkResult);
       console.log(`✅ Microsoft Teams notification sent`);
     }
 
-    // Send PagerDuty notification if connected
-    if (user.pagerduty?.routingKey) {
+    // Send PagerDuty notification if connected and enabled for this monitor
+    if (user.pagerduty?.routingKey && shouldUseIntegration('pagerduty')) {
       await sendPagerDutyNotification(user.pagerduty.routingKey, monitor, checkResult);
       console.log(`✅ PagerDuty notification sent`);
     }
 
-    // Send Google Chat notification if connected
-    if (user.googlechat?.webhookUrl) {
+    // Send Google Chat notification if connected and enabled for this monitor
+    if (user.googlechat?.webhookUrl && shouldUseIntegration('googlechat')) {
       await sendGoogleChatNotification(user.googlechat.webhookUrl, monitor, checkResult);
       console.log(`✅ Google Chat notification sent`);
     }
 
-    // Send Twilio SMS notification if connected
-    if (user.twiliosms?.accountSid && user.twiliosms?.authToken) {
+    // Send Twilio SMS notification if connected and enabled for this monitor
+    if (user.twiliosms?.accountSid && user.twiliosms?.authToken && shouldUseIntegration('twiliosms')) {
       await sendTwilioSmsNotification(user.twiliosms, monitor, checkResult);
       console.log(`✅ Twilio SMS notification sent`);
     }
 
-    // Send Webhook notification if connected
-    if (user.webhook?.webhookUrl) {
+    // Send Webhook notification if connected and enabled for this monitor
+    if (user.webhook?.webhookUrl && shouldUseIntegration('webhook')) {
       await sendWebhookNotification(user.webhook, monitor, checkResult);
       console.log(`✅ Webhook notification sent`);
     }
