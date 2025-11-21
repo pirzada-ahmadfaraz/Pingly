@@ -1170,7 +1170,9 @@ app.get('/api/incidents', authenticateToken, async (req, res) => {
       monitorId: { $in: monitorIds }
     }).sort({ timestamp: -1 }).toArray();
 
-    // Find incidents (transitions from up to down or consecutive down checks)
+    console.log(`Found ${monitors.length} monitors and ${checks.length} checks`);
+
+    // Find incidents
     const incidents = [];
     const monitorMap = {};
 
@@ -1189,49 +1191,118 @@ app.get('/api/incidents', authenticateToken, async (req, res) => {
       checksByMonitor[monitorId].push(check);
     });
 
-    // Process each monitor's checks to find incidents
-    Object.keys(checksByMonitor).forEach(monitorId => {
-      const monitorChecks = checksByMonitor[monitorId];
-      const monitor = monitorMap[monitorId];
+    // Process each monitor
+    monitors.forEach(monitor => {
+      const monitorId = monitor._id.toString();
+      const monitorChecks = checksByMonitor[monitorId] || [];
 
-      if (!monitor) return;
+      // If monitor is currently down, create an ongoing incident
+      if (monitor.lastStatus === 'down') {
+        // Find the start of the current down period
+        let incidentStart = null;
+        let errorMessage = 'Monitor is down';
 
-      let currentIncident = null;
+        // Sort checks from newest to oldest
+        const sortedChecks = [...monitorChecks].sort((a, b) =>
+          new Date(b.timestamp) - new Date(a.timestamp)
+        );
 
-      // Process checks in chronological order
-      monitorChecks.reverse().forEach((check, index, arr) => {
-        if (check.status === 'down' && !currentIncident) {
-          // Start of an incident
-          currentIncident = {
+        // Find the first down check going backwards
+        for (let i = 0; i < sortedChecks.length; i++) {
+          if (sortedChecks[i].status === 'down') {
+            incidentStart = sortedChecks[i].timestamp;
+            errorMessage = sortedChecks[i].errorMessage || 'Monitor is down';
+
+            // Keep going back to find the actual start of this incident
+            if (i + 1 < sortedChecks.length && sortedChecks[i + 1].status === 'down') {
+              continue;
+            } else {
+              break;
+            }
+          } else {
+            // Found an 'up' status, so the incident started after this
+            if (incidentStart) break;
+          }
+        }
+
+        // If we found a start time, create the incident
+        if (incidentStart) {
+          const durationMs = new Date() - new Date(incidentStart);
+          incidents.push({
             status: 'down',
             url: monitor.url || monitor.ipAddress,
-            error: check.errorMessage || 'Unknown error',
-            started: check.timestamp,
-            ended: null
-          };
-        } else if (check.status === 'up' && currentIncident) {
-          // End of an incident
-          currentIncident.ended = check.timestamp;
-          const durationMs = new Date(currentIncident.ended) - new Date(currentIncident.started);
-          currentIncident.duration = durationMs / 60000; // Convert to minutes
-          incidents.push(currentIncident);
-          currentIncident = null;
+            error: errorMessage,
+            started: incidentStart,
+            ended: new Date(),
+            duration: durationMs / 60000 // Convert to minutes
+          });
+        } else if (monitor.lastCheckedAt) {
+          // No checks found but monitor is down, use lastCheckedAt
+          const durationMs = new Date() - new Date(monitor.lastCheckedAt);
+          incidents.push({
+            status: 'down',
+            url: monitor.url || monitor.ipAddress,
+            error: 'Monitor is down',
+            started: monitor.lastCheckedAt,
+            ended: new Date(),
+            duration: durationMs / 60000
+          });
         }
-      });
+      }
 
-      // If there's an ongoing incident
-      if (currentIncident) {
-        const durationMs = new Date() - new Date(currentIncident.started);
-        currentIncident.duration = durationMs / 60000;
-        currentIncident.ended = new Date();
-        incidents.push(currentIncident);
+      // Also find historical incidents (completed down periods)
+      if (monitorChecks.length > 0) {
+        // Sort chronologically (oldest first)
+        const chronologicalChecks = [...monitorChecks].sort((a, b) =>
+          new Date(a.timestamp) - new Date(b.timestamp)
+        );
+
+        let currentIncident = null;
+
+        chronologicalChecks.forEach((check, index) => {
+          if (check.status === 'down' && !currentIncident) {
+            // Start of an incident
+            currentIncident = {
+              status: 'down',
+              url: monitor.url || monitor.ipAddress,
+              error: check.errorMessage || 'Monitor was down',
+              started: check.timestamp,
+              ended: null
+            };
+          } else if (check.status === 'up' && currentIncident) {
+            // End of an incident
+            currentIncident.ended = check.timestamp;
+            const durationMs = new Date(currentIncident.ended) - new Date(currentIncident.started);
+            currentIncident.duration = durationMs / 60000;
+
+            // Only add if this isn't the current ongoing incident (which we already added above)
+            if (monitor.lastStatus !== 'down' || index < chronologicalChecks.length - 1) {
+              incidents.push(currentIncident);
+            }
+            currentIncident = null;
+          }
+        });
+      }
+    });
+
+    // Remove duplicates by checking for incidents with same URL and similar start times
+    const uniqueIncidents = [];
+    const seen = new Set();
+
+    incidents.forEach(incident => {
+      const key = `${incident.url}-${new Date(incident.started).getTime()}`;
+      if (!seen.has(key)) {
+        seen.add(key);
+        uniqueIncidents.push(incident);
       }
     });
 
     // Sort incidents by start time (most recent first)
-    incidents.sort((a, b) => new Date(b.started) - new Date(a.started));
+    uniqueIncidents.sort((a, b) => new Date(b.started) - new Date(a.started));
 
-    res.json({ incidents });
+    console.log(`Found ${uniqueIncidents.length} incidents`);
+
+    res.json({ incidents: uniqueIncidents });
   } catch (error) {
     console.error('Error fetching incidents:', error);
     res.status(500).json({ error: 'Failed to fetch incidents' });
