@@ -8,6 +8,7 @@ import GoogleCallback from "./components/GoogleCallback";
 import CreateHttpMonitor from "./components/CreateHttpMonitor";
 import CreatePingMonitor from "./components/CreatePingMonitor";
 import MonitorDetail from "./components/MonitorDetail";
+import Incidents from "./components/Incidents";
 
 function App() {
   return (
@@ -18,6 +19,7 @@ function App() {
           <Route path="/signup" element={<Signup />} />
           <Route path="/verify" element={<Verify />} />
           <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/dashboard/incidents" element={<Incidents />} />
           <Route path="/dashboard/monitors/new-monitor/http" element={<CreateHttpMonitor />} />
           <Route path="/dashboard/monitors/new-monitor/ping" element={<CreatePingMonitor />} />
           <Route path="/dashboard/monitors/:id" element={<MonitorDetail />} />

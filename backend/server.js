@@ -1148,6 +1148,96 @@ webhookRouter.post('/disconnect', authenticateToken, async (req, res) => {
 
 app.use('/api/integrations/webhook', webhookRouter);
 
+// Get all incidents across all monitors
+app.get('/api/incidents', authenticateToken, async (req, res) => {
+  try {
+    const userEmail = req.user.email;
+    const user = await db.collection('users').findOne({ email: userEmail });
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    // Get all monitors for this user
+    const monitors = await db.collection('monitors').find({
+      userId: user._id
+    }).toArray();
+
+    const monitorIds = monitors.map(m => m._id);
+
+    // Get all checks for these monitors
+    const checks = await db.collection('checks').find({
+      monitorId: { $in: monitorIds }
+    }).sort({ timestamp: -1 }).toArray();
+
+    // Find incidents (transitions from up to down or consecutive down checks)
+    const incidents = [];
+    const monitorMap = {};
+
+    // Create monitor lookup map
+    monitors.forEach(m => {
+      monitorMap[m._id.toString()] = m;
+    });
+
+    // Group checks by monitor
+    const checksByMonitor = {};
+    checks.forEach(check => {
+      const monitorId = check.monitorId.toString();
+      if (!checksByMonitor[monitorId]) {
+        checksByMonitor[monitorId] = [];
+      }
+      checksByMonitor[monitorId].push(check);
+    });
+
+    // Process each monitor's checks to find incidents
+    Object.keys(checksByMonitor).forEach(monitorId => {
+      const monitorChecks = checksByMonitor[monitorId];
+      const monitor = monitorMap[monitorId];
+
+      if (!monitor) return;
+
+      let currentIncident = null;
+
+      // Process checks in chronological order
+      monitorChecks.reverse().forEach((check, index, arr) => {
+        if (check.status === 'down' && !currentIncident) {
+          // Start of an incident
+          currentIncident = {
+            status: 'down',
+            url: monitor.url || monitor.ipAddress,
+            error: check.errorMessage || 'Unknown error',
+            started: check.timestamp,
+            ended: null
+          };
+        } else if (check.status === 'up' && currentIncident) {
+          // End of an incident
+          currentIncident.ended = check.timestamp;
+          const durationMs = new Date(currentIncident.ended) - new Date(currentIncident.started);
+          currentIncident.duration = durationMs / 60000; // Convert to minutes
+          incidents.push(currentIncident);
+          currentIncident = null;
+        }
+      });
+
+      // If there's an ongoing incident
+      if (currentIncident) {
+        const durationMs = new Date() - new Date(currentIncident.started);
+        currentIncident.duration = durationMs / 60000;
+        currentIncident.ended = new Date();
+        incidents.push(currentIncident);
+      }
+    });
+
+    // Sort incidents by start time (most recent first)
+    incidents.sort((a, b) => new Date(b.started) - new Date(a.started));
+
+    res.json({ incidents });
+  } catch (error) {
+    console.error('Error fetching incidents:', error);
+    res.status(500).json({ error: 'Failed to fetch incidents' });
+  }
+});
+
 // Monitor-specific integration routes
 app.get('/api/monitors/:monitorId/integrations', authenticateToken, async (req, res) => {
   try {

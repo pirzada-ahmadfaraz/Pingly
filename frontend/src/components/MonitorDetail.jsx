@@ -552,6 +552,8 @@ const MonitorDetail = () => {
                     onClick={() => {
                       if (item.id === 'integrations') {
                         navigate('/dashboard', { state: { activeTab: 'integrations' } });
+                      } else if (item.id === 'incidents') {
+                        navigate('/dashboard/incidents');
                       } else {
                         navigate('/dashboard');
                       }

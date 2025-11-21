@@ -946,7 +946,13 @@ const Dashboard = () => {
               return (
                 <li key={item.id}>
                   <button
-                    onClick={() => setActiveTab(item.id)}
+                    onClick={() => {
+                      if (item.id === 'incidents') {
+                        navigate('/dashboard/incidents');
+                      } else {
+                        setActiveTab(item.id);
+                      }
+                    }}
                     className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors text-left ${
                       activeTab === item.id
                         ? 'bg-green-500/10 text-green-500'
