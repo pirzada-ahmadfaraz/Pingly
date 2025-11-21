@@ -1198,30 +1198,33 @@ app.get('/api/incidents', authenticateToken, async (req, res) => {
 
       // If monitor is currently down, create an ongoing incident
       if (monitor.lastStatus === 'down') {
-        // Find the start of the current down period
-        let incidentStart = null;
-        let errorMessage = 'Monitor is down';
-
         // Sort checks from newest to oldest
         const sortedChecks = [...monitorChecks].sort((a, b) =>
           new Date(b.timestamp) - new Date(a.timestamp)
         );
 
-        // Find the first down check going backwards
-        for (let i = 0; i < sortedChecks.length; i++) {
+        // Get the most recent error message from the latest down check
+        let latestErrorMessage = 'Monitor is down';
+        const latestDownCheck = sortedChecks.find(check => check.status === 'down');
+        if (latestDownCheck && latestDownCheck.errorMessage) {
+          latestErrorMessage = latestDownCheck.errorMessage;
+        }
+
+        // Find the start of the current down period
+        let incidentStart = null;
+
+        // Find the first down check going backwards to find when incident started
+        for (let i = sortedChecks.length - 1; i >= 0; i--) {
           if (sortedChecks[i].status === 'down') {
             incidentStart = sortedChecks[i].timestamp;
-            errorMessage = sortedChecks[i].errorMessage || 'Monitor is down';
-
-            // Keep going back to find the actual start of this incident
-            if (i + 1 < sortedChecks.length && sortedChecks[i + 1].status === 'down') {
-              continue;
-            } else {
+            // Check if the previous check (if exists) was 'up'
+            if (i > 0 && sortedChecks[i - 1].status === 'up') {
+              // This is where the incident started
               break;
             }
-          } else {
-            // Found an 'up' status, so the incident started after this
-            if (incidentStart) break;
+          } else if (incidentStart) {
+            // We found a down check before this up check
+            break;
           }
         }
 
@@ -1231,7 +1234,7 @@ app.get('/api/incidents', authenticateToken, async (req, res) => {
           incidents.push({
             status: 'down',
             url: monitor.url || monitor.ipAddress,
-            error: errorMessage,
+            error: latestErrorMessage,
             started: incidentStart,
             ended: new Date(),
             duration: durationMs / 60000 // Convert to minutes
@@ -1242,7 +1245,7 @@ app.get('/api/incidents', authenticateToken, async (req, res) => {
           incidents.push({
             status: 'down',
             url: monitor.url || monitor.ipAddress,
-            error: 'Monitor is down',
+            error: latestErrorMessage,
             started: monitor.lastCheckedAt,
             ended: new Date(),
             duration: durationMs / 60000
