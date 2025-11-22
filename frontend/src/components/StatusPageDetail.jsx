@@ -11,6 +11,7 @@ const StatusPageDetail = () => {
   const [monitors, setMonitors] = useState([]);
   const [userMonitors, setUserMonitors] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [sections, setSections] = useState([{ name: 'Primary Services', monitors: [] }]);
 
   const [formData, setFormData] = useState({
@@ -202,30 +203,6 @@ const StatusPageDetail = () => {
 
   const user = JSON.parse(localStorage.getItem('user') || '{}');
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-[#0a0a0a] text-white flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-500"></div>
-      </div>
-    );
-  }
-
-  if (!statusPage) {
-    return (
-      <div className="min-h-screen bg-[#0a0a0a] text-white flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-xl text-gray-400 mb-4">Status page not found</p>
-          <button
-            onClick={() => navigate('/dashboard/status-pages')}
-            className="bg-green-500 hover:bg-green-600 px-6 py-2 rounded-lg"
-          >
-            Back to Status Pages
-          </button>
-        </div>
-      </div>
-    );
-  }
-
   const filteredMonitors = userMonitors.filter(m =>
     m.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
@@ -297,240 +274,266 @@ const StatusPageDetail = () => {
 
       {/* Main Content */}
       <main className="flex-1 ml-56 p-8">
-      {/* Breadcrumb */}
-      <div className="flex items-center gap-2 text-sm text-gray-400 mb-6">
-        <button
-          onClick={() => navigate('/dashboard/status-pages')}
-          className="hover:text-white transition-colors"
-        >
-          Status Pages
-        </button>
-        <ChevronRight size={16} />
-        <span className="text-white">{statusPage.name}</span>
-      </div>
-
-      {/* Header */}
-      <div className="flex items-center justify-between mb-8">
-        <h1 className="text-3xl font-bold">{statusPage.name}</h1>
-        <a
-          href={`/status/${id}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors"
-        >
-          <ExternalLink size={20} />
-        </a>
-      </div>
-
-      {/* Tabs */}
-      <div className="flex gap-6 mb-8 border-b border-white/10">
-        {['settings', 'monitors', 'delete'].map((tab) => (
-          <button
-            key={tab}
-            onClick={() => setActiveTab(tab)}
-            className={`pb-3 px-1 text-sm font-medium transition-colors capitalize ${
-              activeTab === tab
-                ? 'text-white border-b-2 border-white'
-                : 'text-gray-400 hover:text-white'
-            }`}
-          >
-            {tab}
-          </button>
-        ))}
-      </div>
-
-      {/* Settings Tab */}
-      {activeTab === 'settings' && (
-        <div className="max-w-4xl space-y-6">
-          <div>
-            <label className="block text-white font-medium mb-2">Name</label>
-            <input
-              type="text"
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              className="w-full px-4 py-3 bg-[#1a1a1a] border border-white/10 rounded-lg text-white focus:outline-none focus:border-green-500/50"
-            />
+        {loading ? (
+          <div className="flex items-center justify-center min-h-[60vh]">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-500"></div>
           </div>
-
-          <div>
-            <label className="block text-white font-medium mb-2">Logo</label>
-            <input
-              type="text"
-              value={formData.logoUrl}
-              onChange={(e) => setFormData({ ...formData, logoUrl: e.target.value })}
-              placeholder="https://example.com/logo.png"
-              className="w-full px-4 py-3 bg-[#1a1a1a] border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-green-500/50"
-            />
-            <p className="text-gray-400 text-sm mt-2">
-              Enter the URL of your logo image. This will appear at the top of your status page.
-            </p>
+        ) : !statusPage ? (
+          <div className="flex items-center justify-center min-h-[60vh]">
+            <div className="text-center">
+              <p className="text-xl text-gray-400 mb-4">Status page not found</p>
+              <button
+                onClick={() => navigate('/dashboard/status-pages')}
+                className="bg-green-500 hover:bg-green-600 px-6 py-2 rounded-lg"
+              >
+                Back to Status Pages
+              </button>
+            </div>
           </div>
+        ) : (
+          <>
+            {/* Breadcrumb */}
+            <div className="flex items-center gap-2 text-sm text-gray-400 mb-6">
+              <button
+                onClick={() => navigate('/dashboard/status-pages')}
+                className="hover:text-white transition-colors"
+              >
+                Status Pages
+              </button>
+              <ChevronRight size={16} />
+              <span className="text-white">{statusPage.name}</span>
+            </div>
 
-          <div>
-            <label className="block text-white font-medium mb-2">Logo click destination URL</label>
-            <input
-              type="text"
-              value={formData.logoLinkUrl}
-              onChange={(e) => setFormData({ ...formData, logoLinkUrl: e.target.value })}
-              placeholder="https://example.com"
-              className="w-full px-4 py-3 bg-[#1a1a1a] border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-green-500/50"
-            />
-            <p className="text-gray-400 text-sm mt-2">
-              Enter the URL where your logo should link to when clicked on the status page.
-            </p>
-          </div>
+            {/* Header */}
+            <div className="flex items-center justify-between mb-8">
+              <h1 className="text-3xl font-bold">{statusPage.name}</h1>
+              <a
+                href={`/status/${id}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors"
+              >
+                <ExternalLink size={20} />
+              </a>
+            </div>
 
-          <div>
-            <label className="block text-white font-medium mb-2">Favicon Link</label>
-            <input
-              type="text"
-              value={formData.faviconUrl}
-              onChange={(e) => setFormData({ ...formData, faviconUrl: e.target.value })}
-              placeholder="https://example.com/favicon.ico"
-              className="w-full px-4 py-3 bg-[#1a1a1a] border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-green-500/50"
-            />
-            <p className="text-gray-400 text-sm mt-2">
-              Add link to your favicon. It will be displayed on the status page.
-            </p>
-          </div>
+            {/* Tabs */}
+            <div className="flex gap-6 mb-8 border-b border-white/10">
+              {['settings', 'monitors', 'delete'].map((tab) => (
+                <button
+                  key={tab}
+                  onClick={() => setActiveTab(tab)}
+                  className={`pb-3 px-1 text-sm font-medium transition-colors capitalize ${
+                    activeTab === tab
+                      ? 'text-white border-b-2 border-white'
+                      : 'text-gray-400 hover:text-white'
+                  }`}
+                >
+                  {tab}
+                </button>
+              ))}
+            </div>
 
-          <button
-            onClick={handleUpdateSettings}
-            className="px-6 py-3 bg-green-500 hover:bg-green-600 rounded-lg font-medium transition-colors"
-          >
-            Save Settings
-          </button>
-        </div>
-      )}
-
-      {/* Monitors Tab */}
-      {activeTab === 'monitors' && (
-        <div className="max-w-6xl">
-          <div className="mb-6">
-            <h3 className="text-xl font-bold mb-2">Service Monitors</h3>
-            <p className="text-gray-400 text-sm mb-1">
-              Choose which monitors to show on your status page.
-            </p>
-            <p className="text-gray-400 text-sm">
-              You can drag them around to change their order, give them friendly names and add tooltip descriptions so visitors know what each monitor does.
-            </p>
-            <p className="text-green-500 text-sm mt-2">
-              Note: Remember to click "Save Changes" to apply your modifications.
-            </p>
-          </div>
-
-          {sections.map((section, sectionIndex) => (
-            <div key={sectionIndex} className="mb-8">
-              <div className="mb-4">
-                <label className="block text-white font-medium mb-2">Section name</label>
-                <input
-                  type="text"
-                  value={section.name}
-                  onChange={(e) => handleUpdateSectionName(sectionIndex, e.target.value)}
-                  className="w-full px-4 py-3 bg-[#1a1a1a] border border-white/10 rounded-lg text-white focus:outline-none focus:border-green-500/50"
-                />
-              </div>
-
-              <div className="mb-4">
-                <h4 className="text-white font-medium mb-3">Resources</h4>
-                <div className="relative mb-4">
-                  <button
-                    onClick={() => setSearchQuery(searchQuery === '' ? ' ' : '')}
-                    className="w-full px-4 py-3 bg-[#1a1a1a] border border-white/10 rounded-lg text-gray-400 text-left flex items-center gap-2 hover:bg-[#252525] transition-colors"
-                  >
-                    <Plus size={18} />
-                    Search to add resources
-                  </button>
-
-                  {searchQuery !== '' && (
-                    <div className="absolute top-full left-0 right-0 mt-2 bg-[#1a1a1a] border border-white/10 rounded-lg p-4 z-10">
-                      <input
-                        type="text"
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        placeholder="Search resources..."
-                        autoFocus
-                        className="w-full px-4 py-2 bg-transparent border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-green-500/50 mb-3"
-                      />
-                      <div className="max-h-60 overflow-y-auto">
-                        {filteredMonitors.map((monitor) => (
-                          <button
-                            key={monitor._id}
-                            onClick={() => handleAddMonitorToSection(sectionIndex, monitor._id)}
-                            className="w-full px-4 py-2 text-left hover:bg-white/5 rounded transition-colors flex items-center gap-3"
-                          >
-                            <Globe size={16} className="text-gray-400" />
-                            <span className="text-white">{monitor.name}</span>
-                          </button>
-                        ))}
-                        {filteredMonitors.length === 0 && (
-                          <p className="text-gray-500 text-sm text-center py-4">No monitors found</p>
-                        )}
-                      </div>
-                    </div>
-                  )}
+            {/* Settings Tab */}
+            {activeTab === 'settings' && (
+              <div className="max-w-4xl space-y-6">
+                <div>
+                  <label className="block text-white font-medium mb-2">Name</label>
+                  <input
+                    type="text"
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    className="w-full px-4 py-3 bg-[#1a1a1a] border border-white/10 rounded-lg text-white focus:outline-none focus:border-green-500/50"
+                  />
                 </div>
 
-                {section.monitors.length > 0 && (
-                  <div className="space-y-2">
-                    {section.monitors.map((monitor) => (
-                      <div
-                        key={monitor._id}
-                        className="flex items-center justify-between px-4 py-3 bg-[#1a1a1a] border border-white/10 rounded-lg"
-                      >
-                        <div className="flex items-center gap-3">
-                          <Globe size={16} className="text-gray-400" />
-                          <span className="text-white">{monitor.name}</span>
-                        </div>
-                        <button
-                          onClick={() => handleRemoveMonitorFromSection(sectionIndex, monitor._id)}
-                          className="text-red-500 hover:text-red-400 text-sm"
-                        >
-                          Remove
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
+                <div>
+                  <label className="block text-white font-medium mb-2">Logo</label>
+                  <input
+                    type="text"
+                    value={formData.logoUrl}
+                    onChange={(e) => setFormData({ ...formData, logoUrl: e.target.value })}
+                    placeholder="https://example.com/logo.png"
+                    className="w-full px-4 py-3 bg-[#1a1a1a] border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-green-500/50"
+                  />
+                  <p className="text-gray-400 text-sm mt-2">
+                    Enter the URL of your logo image. This will appear at the top of your status page.
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-white font-medium mb-2">Logo click destination URL</label>
+                  <input
+                    type="text"
+                    value={formData.logoLinkUrl}
+                    onChange={(e) => setFormData({ ...formData, logoLinkUrl: e.target.value })}
+                    placeholder="https://example.com"
+                    className="w-full px-4 py-3 bg-[#1a1a1a] border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-green-500/50"
+                  />
+                  <p className="text-gray-400 text-sm mt-2">
+                    Enter the URL where your logo should link to when clicked on the status page.
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-white font-medium mb-2">Favicon Link</label>
+                  <input
+                    type="text"
+                    value={formData.faviconUrl}
+                    onChange={(e) => setFormData({ ...formData, faviconUrl: e.target.value })}
+                    placeholder="https://example.com/favicon.ico"
+                    className="w-full px-4 py-3 bg-[#1a1a1a] border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-green-500/50"
+                  />
+                  <p className="text-gray-400 text-sm mt-2">
+                    Add link to your favicon. It will be displayed on the status page.
+                  </p>
+                </div>
+
+                <button
+                  onClick={handleUpdateSettings}
+                  className="px-6 py-3 bg-green-500 hover:bg-green-600 rounded-lg font-medium transition-colors"
+                >
+                  Save Settings
+                </button>
               </div>
-            </div>
-          ))}
+            )}
 
-          <button
-            onClick={handleAddSection}
-            className="px-6 py-3 bg-[#1a1a1a] border border-white/10 rounded-lg text-white hover:bg-[#252525] transition-colors flex items-center gap-2 mb-6"
-          >
-            <Plus size={18} />
-            Add section
-          </button>
+            {/* Monitors Tab */}
+            {activeTab === 'monitors' && (
+              <div className="max-w-6xl">
+                <div className="mb-6">
+                  <h3 className="text-xl font-bold mb-2">Service Monitors</h3>
+                  <p className="text-gray-400 text-sm mb-1">
+                    Choose which monitors to show on your status page.
+                  </p>
+                  <p className="text-gray-400 text-sm">
+                    You can drag them around to change their order, give them friendly names and add tooltip descriptions so visitors know what each monitor does.
+                  </p>
+                  <p className="text-green-500 text-sm mt-2">
+                    Note: Remember to click "Save Changes" to apply your modifications.
+                  </p>
+                </div>
 
-          <button
-            onClick={handleSaveMonitors}
-            className="px-8 py-3 bg-green-500 hover:bg-green-600 rounded-lg font-medium transition-colors flex items-center gap-2"
-          >
-            <Save size={18} />
-            Save Changes
-          </button>
-        </div>
-      )}
+                {sections.map((section, sectionIndex) => (
+                  <div key={sectionIndex} className="mb-8">
+                    <div className="mb-4">
+                      <label className="block text-white font-medium mb-2">Section name</label>
+                      <input
+                        type="text"
+                        value={section.name}
+                        onChange={(e) => handleUpdateSectionName(sectionIndex, e.target.value)}
+                        className="w-full px-4 py-3 bg-[#1a1a1a] border border-white/10 rounded-lg text-white focus:outline-none focus:border-green-500/50"
+                      />
+                    </div>
 
-      {/* Delete Tab */}
-      {activeTab === 'delete' && (
-        <div className="max-w-2xl">
-          <div className="bg-[#0f0f0f] border border-red-500/20 rounded-lg p-6">
-            <h3 className="text-xl font-bold text-red-500 mb-2">Delete Status Page</h3>
-            <p className="text-gray-400 mb-6">
-              This action cannot be undone. This will permanently delete the status page and all associated data.
-            </p>
-            <button
-              onClick={handleDelete}
-              className="px-6 py-3 bg-red-500 hover:bg-red-600 text-white rounded-lg font-medium transition-colors"
-            >
-              Delete Status Page
-            </button>
-          </div>
-        </div>
-      )}
+                    <div className="mb-4">
+                      <h4 className="text-white font-medium mb-3">Resources</h4>
+                      <div className="relative mb-4">
+                        <button
+                          onClick={() => {
+                            const nextOpen = !isSearchOpen;
+                            setIsSearchOpen(nextOpen);
+                            if (nextOpen) {
+                              setSearchQuery('');
+                            }
+                          }}
+                          className="w-full px-4 py-3 bg-[#1a1a1a] border border-white/10 rounded-lg text-gray-400 text-left flex items-center gap-2 hover:bg-[#252525] transition-colors"
+                        >
+                          <Plus size={18} />
+                          Search to add resources
+                        </button>
+
+                        {isSearchOpen && (
+                          <div className="absolute top-full left-0 right-0 mt-2 bg-[#1a1a1a] border border-white/10 rounded-lg p-4 z-10">
+                            <input
+                              type="text"
+                              value={searchQuery}
+                              onChange={(e) => setSearchQuery(e.target.value)}
+                              placeholder="Search resources..."
+                              autoFocus
+                              className="w-full px-4 py-2 bg-transparent border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-green-500/50 mb-3"
+                            />
+                            <div className="max-h-60 overflow-y-auto">
+                              {filteredMonitors.map((monitor) => (
+                                <button
+                                  key={monitor._id}
+                                  onClick={() => handleAddMonitorToSection(sectionIndex, monitor._id)}
+                                  className="w-full px-4 py-2 text-left hover:bg-white/5 rounded transition-colors flex items-center gap-3"
+                                >
+                                  <Globe size={16} className="text-gray-400" />
+                                  <span className="text-white">{monitor.name}</span>
+                                </button>
+                              ))}
+                              {filteredMonitors.length === 0 && (
+                                <p className="text-gray-500 text-sm text-center py-4">No monitors found</p>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      {section.monitors.length > 0 && (
+                        <div className="space-y-2">
+                          {section.monitors.map((monitor) => (
+                            <div
+                              key={monitor._id}
+                              className="flex items-center justify-between px-4 py-3 bg-[#1a1a1a] border border-white/10 rounded-lg"
+                            >
+                              <div className="flex items-center gap-3">
+                                <Globe size={16} className="text-gray-400" />
+                                <span className="text-white">{monitor.name}</span>
+                              </div>
+                              <button
+                                onClick={() => handleRemoveMonitorFromSection(sectionIndex, monitor._id)}
+                                className="text-red-500 hover:text-red-400 text-sm"
+                              >
+                                Remove
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+
+                <button
+                  onClick={handleAddSection}
+                  className="px-6 py-3 bg-[#1a1a1a] border border-white/10 rounded-lg text-white hover:bg-[#252525] transition-colors flex items-center gap-2 mb-6"
+                >
+                  <Plus size={18} />
+                  Add section
+                </button>
+
+                <button
+                  onClick={handleSaveMonitors}
+                  className="px-8 py-3 bg-green-500 hover:bg-green-600 rounded-lg font-medium transition-colors flex items-center gap-2"
+                >
+                  <Save size={18} />
+                  Save Changes
+                </button>
+              </div>
+            )}
+
+            {/* Delete Tab */}
+            {activeTab === 'delete' && (
+              <div className="max-w-2xl">
+                <div className="bg-[#0f0f0f] border border-red-500/20 rounded-lg p-6">
+                  <h3 className="text-xl font-bold text-red-500 mb-2">Delete Status Page</h3>
+                  <p className="text-gray-400 mb-6">
+                    This action cannot be undone. This will permanently delete the status page and all associated data.
+                  </p>
+                  <button
+                    onClick={handleDelete}
+                    className="px-6 py-3 bg-red-500 hover:bg-red-600 text-white rounded-lg font-medium transition-colors"
+                  >
+                    Delete Status Page
+                  </button>
+                </div>
+              </div>
+            )}
+          </>
+        )}
       </main>
     </div>
   );
