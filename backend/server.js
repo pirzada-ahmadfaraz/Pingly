@@ -1166,7 +1166,7 @@ app.get('/api/incidents', authenticateToken, async (req, res) => {
     const monitorIds = monitors.map(m => m._id);
 
     // Get all checks for these monitors
-    const checks = await db.collection('checks').find({
+    const checks = await db.collection('monitor_checks').find({
       monitorId: { $in: monitorIds }
     }).sort({ timestamp: -1 }).toArray();
 
