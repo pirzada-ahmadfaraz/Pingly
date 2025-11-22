@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronRight, Check } from 'lucide-react';
+import { ChevronRight, Check, LayoutGrid, AlertCircle, FileText, Zap, Users, Settings } from 'lucide-react';
 
 const CreateStatusPage = () => {
   const navigate = useNavigate();
@@ -10,6 +10,15 @@ const CreateStatusPage = () => {
     faviconUrl: '',
   });
   const [creating, setCreating] = useState(false);
+
+  const menuItems = [
+    { id: 'monitors', label: 'Monitors', icon: LayoutGrid },
+    { id: 'incidents', label: 'Incidents', icon: AlertCircle },
+    { id: 'status-pages', label: 'Status Pages', icon: FileText },
+    { id: 'integrations', label: 'Integrations', icon: Zap },
+    { id: 'users', label: 'Users', icon: Users },
+    { id: 'settings', label: 'Settings', icon: Settings },
+  ];
 
   const handleCreate = async () => {
     if (!formData.name.trim()) {
@@ -46,8 +55,81 @@ const CreateStatusPage = () => {
     }
   };
 
+  const handleLogout = () => {
+    localStorage.removeItem('auth_token');
+    localStorage.removeItem('user');
+    navigate('/');
+  };
+
+  const user = JSON.parse(localStorage.getItem('user') || '{}');
+
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-white p-8">
+    <div className="min-h-screen bg-[#0a0a0a] text-white flex">
+      {/* Sidebar */}
+      <aside className="w-56 bg-[#0f0f0f] border-r border-white/10 flex flex-col fixed h-full">
+        <div className="p-6 border-b border-white/10">
+          <div className="flex items-center gap-3">
+            <img src="/logo.png" alt="Pingly Logo" className="h-8 w-8" />
+            <span className="text-xl font-bold">Pingly</span>
+          </div>
+        </div>
+
+        <nav className="flex-1 p-4">
+          <ul className="space-y-1">
+            {menuItems.map((item) => {
+              const Icon = item.icon;
+              return (
+                <li key={item.id}>
+                  <button
+                    onClick={() => {
+                      if (item.id === 'monitors') {
+                        navigate('/dashboard');
+                      } else if (item.id === 'incidents') {
+                        navigate('/dashboard/incidents');
+                      } else if (item.id === 'status-pages') {
+                        navigate('/dashboard/status-pages');
+                      } else if (item.id === 'integrations') {
+                        navigate('/dashboard', { state: { activeTab: 'integrations' } });
+                      }
+                    }}
+                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors text-left ${
+                      item.id === 'status-pages'
+                        ? 'bg-green-500/10 text-green-500'
+                        : 'text-gray-400 hover:bg-white/5 hover:text-white'
+                    }`}
+                  >
+                    <Icon size={20} />
+                    <span className="text-sm font-medium">{item.label}</span>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </nav>
+
+        <div className="p-4 border-t border-white/10">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center text-xs font-bold">
+                {user?.email?.charAt(0).toUpperCase()}
+              </div>
+              <div className="text-xs text-gray-400 max-w-[100px] truncate">
+                {user?.email}
+              </div>
+            </div>
+            <button
+              onClick={handleLogout}
+              className="text-gray-400 hover:text-red-500 transition-colors text-xs"
+              title="Logout"
+            >
+              Logout
+            </button>
+          </div>
+        </div>
+      </aside>
+
+      {/* Main Content */}
+      <main className="flex-1 ml-56 p-8">
       {/* Breadcrumb */}
       <div className="flex items-center gap-2 text-sm text-gray-400 mb-8">
         <button
@@ -122,6 +204,7 @@ const CreateStatusPage = () => {
           </button>
         </div>
       </div>
+      </main>
     </div>
   );
 };
