@@ -140,7 +140,7 @@ const MonitorDetail = () => {
       isFetching = true;
       try {
         await fetchMonitorDetails();
-        const rangeHours = selectedRange === '7d' ? 24 * 7 : selectedRange === '30d' ? 24 * 30 : 24;
+        const rangeHours = selectedRange === '7d' ? 24 * 7 : 24;
         await fetchMonitorChecks(rangeHours);
       } finally {
         isFetching = false;
@@ -186,7 +186,7 @@ const MonitorDetail = () => {
         setTimeout(async () => {
           try {
             await fetchMonitorDetails();
-            const rangeHours = selectedRange === '7d' ? 24 * 7 : selectedRange === '30d' ? 24 * 30 : 24;
+            const rangeHours = selectedRange === '7d' ? 24 * 7 : 24;
             await fetchMonitorChecks(rangeHours);
             hasTriggeredFetch = false; // Reset for next cycle
           } catch (error) {
@@ -701,7 +701,6 @@ const MonitorDetail = () => {
                 >
                   <option value="24h">Last 24 hours</option>
                   <option value="7d">Last 7 days</option>
-                  <option value="30d">Last 30 days</option>
                 </select>
               </div>
 
@@ -737,6 +736,7 @@ const MonitorDetail = () => {
                       stroke="#3b82f6"
                       strokeWidth={2}
                       dot={false}
+                      isAnimationActive={false}
                     />
                   </LineChart>
                 </ResponsiveContainer>
