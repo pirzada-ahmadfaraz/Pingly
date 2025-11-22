@@ -1514,9 +1514,18 @@ app.get('/api/public/status-pages/:id', async (req, res) => {
       (statusPage.sections || []).map(async (section) => {
         const monitorsWithData = await Promise.all(
           (section.monitors || []).map(async (monitor) => {
+            // Fetch the actual current monitor data from the monitors collection
+            const currentMonitor = await db.collection('monitors').findOne({
+              _id: new ObjectId(monitor._id)
+            });
+
+            if (!currentMonitor) {
+              return null; // Skip if monitor no longer exists
+            }
+
             // Get the last 60 checks for this monitor (for 7 days visualization)
             const checks = await db.collection('monitor_checks').find({
-              monitorId: monitor._id
+              monitorId: new ObjectId(monitor._id)
             }).sort({ timestamp: -1 }).limit(60).toArray();
 
             // Reverse to get chronological order
@@ -1526,15 +1535,19 @@ app.get('/api/public/status-pages/:id', async (req, res) => {
             }));
 
             return {
-              ...monitor,
+              _id: currentMonitor._id,
+              name: currentMonitor.name,
+              url: currentMonitor.url,
+              lastStatus: currentMonitor.lastStatus,
               uptimeData
             };
           })
         );
 
+        // Filter out null monitors (ones that were deleted)
         return {
           ...section,
-          monitors: monitorsWithData
+          monitors: monitorsWithData.filter(m => m !== null)
         };
       })
     );
