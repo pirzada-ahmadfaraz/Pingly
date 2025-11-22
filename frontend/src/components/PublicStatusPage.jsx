@@ -29,15 +29,20 @@ const PublicStatusPage = () => {
   };
 
   const getUptimePercentage = (monitor) => {
-    if (!monitor.uptimeData || monitor.uptimeData.length === 0) return '0.00';
-    const upCount = monitor.uptimeData.filter(d => d.status === 'up').length;
-    return ((upCount / monitor.uptimeData.length) * 100).toFixed(2);
+    if (monitor?.uptimePercentage24h) {
+      return Number(monitor.uptimePercentage24h).toFixed(2);
+    }
+    const series = (monitor?.uptimeData || []).slice(-96);
+    if (series.length === 0) return '0.00';
+    const upCount = series.filter(d => d.status === 'up').length;
+    return ((upCount / series.length) * 100).toFixed(2);
   };
 
   const getOverallStatus = () => {
     if (!statusPage || !statusPage.sections) return 'operational';
 
     let hasRecentIssues = false;
+    const twentyFourHoursAgo = Date.now() - 24 * 60 * 60 * 1000;
 
     for (const section of statusPage.sections) {
       for (const monitor of section.monitors) {
@@ -45,8 +50,11 @@ const PublicStatusPage = () => {
           return 'down';
         }
 
-        // If any recent check was down, surface it so the page isn't falsely all green
-        if (Array.isArray(monitor.uptimeData) && monitor.uptimeData.some(d => d.status === 'down')) {
+        const recentDown = monitor.recentDown
+          ?? (Array.isArray(monitor.uptimeData) &&
+            monitor.uptimeData.some(d => d.status === 'down' && new Date(d.timestamp).getTime() >= twentyFourHoursAgo));
+
+        if (recentDown) {
           hasRecentIssues = true;
         }
       }
@@ -156,26 +164,35 @@ const PublicStatusPage = () => {
             <h2 className="text-2xl font-bold mb-6">{section.name}</h2>
 
             <div className="space-y-6">
-              {section.monitors && section.monitors.map((monitor) => (
-                <div key={monitor._id} className="bg-[#0f0f0f] border border-white/10 rounded-lg p-6">
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="flex items-center gap-3">
-                      <div className={`w-3 h-3 rounded-full ${
-                        monitor.lastStatus === 'up' ? 'bg-green-500' : 'bg-red-500'
-                      }`}></div>
-                      <h3 className="text-xl font-semibold">{monitor.name}</h3>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-green-500 font-semibold">
-                        Uptime {getUptimePercentage(monitor)}%
-                      </p>
-                    </div>
-                  </div>
+              {section.monitors && section.monitors.map((monitor) => {
+                const uptimeBars = (monitor.uptimeData && monitor.uptimeData.length > 0
+                  ? monitor.uptimeData.slice(-96)
+                  : Array.from({ length: 96 }, () => ({ status: 'unknown', timestamp: null }))
+                );
 
-                  {/* Uptime Bars */}
-                  <div className="flex items-center gap-1 mb-2">
-                    {monitor.uptimeData && monitor.uptimeData.length > 0 ? (
-                      monitor.uptimeData.map((data, idx) => (
+                return (
+                  <div key={monitor._id} className="bg-[#0f0f0f] border border-white/10 rounded-lg p-6">
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="flex items-center gap-3">
+                        <div className={`w-3 h-3 rounded-full ${
+                          monitor.lastStatus === 'up' ? 'bg-green-500' :
+                          monitor.lastStatus === 'down' ? 'bg-red-500' :
+                          'bg-gray-500'
+                        }`}></div>
+                        <h3 className="text-xl font-semibold">{monitor.name}</h3>
+                      </div>
+                      <div className="text-right">
+                        <p className={`font-semibold ${
+                          monitor.lastStatus === 'down' ? 'text-red-500' : 'text-green-500'
+                        }`}>
+                          Uptime {getUptimePercentage(monitor)}%
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Uptime Bars */}
+                    <div className="flex items-center gap-1 mb-2">
+                      {uptimeBars.map((data, idx) => (
                         <div
                           key={idx}
                           className={`flex-1 h-10 rounded ${
@@ -183,26 +200,22 @@ const PublicStatusPage = () => {
                             data.status === 'down' ? 'bg-red-500' :
                             'bg-gray-700'
                           }`}
-                          title={`${data.status} - ${new Date(data.timestamp).toLocaleString()}`}
+                          title={
+                            data.timestamp
+                              ? `${data.status} - ${new Date(data.timestamp).toLocaleString()}`
+                              : 'No data'
+                          }
                         ></div>
-                      ))
-                    ) : (
-                      // Show grey bars when no data
-                      Array.from({ length: 60 }).map((_, idx) => (
-                        <div
-                          key={idx}
-                          className="flex-1 h-10 rounded bg-gray-700"
-                        ></div>
-                      ))
-                    )}
-                  </div>
+                      ))}
+                    </div>
 
-                  <div className="flex justify-between text-sm text-gray-400">
-                    <span>7 days ago</span>
-                    <span>Today</span>
+                    <div className="flex justify-between text-sm text-gray-400">
+                      <span>Last 24h</span>
+                      <span>Now</span>
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         ))}

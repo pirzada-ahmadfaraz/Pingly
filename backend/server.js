@@ -1523,23 +1523,39 @@ app.get('/api/public/status-pages/:id', async (req, res) => {
               return null; // Skip if monitor no longer exists
             }
 
-            // Get a generous slice of recent checks for visualization (cover multiple days)
-            const checks = await db.collection('monitor_checks').find({
-              monitorId: new ObjectId(monitor._id)
-            }).sort({ timestamp: -1 }).limit(500).toArray();
+            const now = Date.now();
+            const sevenDaysAgo = new Date(now - 7 * 24 * 60 * 60 * 1000);
+            const twentyFourHoursAgo = new Date(now - 24 * 60 * 60 * 1000);
 
-            // Reverse to get chronological order
-            const uptimeData = checks.reverse().map(check => ({
-              status: check.status,
-              timestamp: check.timestamp
-            }));
+            // Pull recent history (up to 7 days, capped to 200 records for payload size)
+            const checks = await db.collection('monitor_checks').find({
+              monitorId: new ObjectId(monitor._id),
+              timestamp: { $gte: sevenDaysAgo }
+            }).sort({ timestamp: -1 }).limit(200).toArray();
+
+            // Reverse to get chronological order and trim to a reasonable window for charts
+            const chronologicalChecks = checks.reverse();
+            const uptimeData = chronologicalChecks
+              .map(check => ({
+                status: check.status,
+                timestamp: check.timestamp
+              }))
+              .slice(-120); // keep latest 120 points for the bar chart
+
+            const recentWindow = chronologicalChecks.filter(check => new Date(check.timestamp) >= twentyFourHoursAgo);
+            const recentDown = recentWindow.some(check => check.status === 'down');
+            const uptimePercentage24h = recentWindow.length > 0
+              ? ((recentWindow.filter(check => check.status === 'up').length / recentWindow.length) * 100).toFixed(2)
+              : null;
 
             return {
               _id: currentMonitor._id,
               name: currentMonitor.name,
               url: currentMonitor.url,
               lastStatus: currentMonitor.lastStatus,
-              uptimeData
+              uptimeData,
+              recentDown,
+              uptimePercentage24h
             };
           })
         );

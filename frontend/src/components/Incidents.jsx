@@ -161,6 +161,8 @@ const Incidents = () => {
                         navigate('/dashboard');
                       } else if (item.id === 'incidents') {
                         navigate('/dashboard/incidents');
+                      } else if (item.id === 'status-pages') {
+                        navigate('/dashboard/status-pages');
                       } else if (item.id === 'integrations') {
                         navigate('/dashboard', { state: { activeTab: 'integrations' } });
                       }
