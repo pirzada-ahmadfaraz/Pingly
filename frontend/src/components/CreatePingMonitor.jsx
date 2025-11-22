@@ -153,7 +153,7 @@ const CreatePingMonitor = () => {
               return (
                 <li key={item.id}>
                   <button
-                    onClick(() => {
+                    onClick={() => {
                       if (item.id === 'incidents') {
                         navigate('/dashboard/incidents');
                       } else if (item.id === 'status-pages') {
