@@ -11,6 +11,7 @@ const MonitorDetail = () => {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('overview');
   const [nextCheckIn, setNextCheckIn] = useState('');
+  const [selectedRange, setSelectedRange] = useState('24h');
   const [connectedIntegrations, setConnectedIntegrations] = useState([]);
   const [monitorIntegrations, setMonitorIntegrations] = useState([]);
   const [showIntegrationDropdown, setShowIntegrationDropdown] = useState(false);
@@ -139,7 +140,8 @@ const MonitorDetail = () => {
       isFetching = true;
       try {
         await fetchMonitorDetails();
-        await fetchMonitorChecks();
+        const rangeHours = selectedRange === '7d' ? 24 * 7 : selectedRange === '30d' ? 24 * 30 : 24;
+        await fetchMonitorChecks(rangeHours);
       } finally {
         isFetching = false;
       }
@@ -152,7 +154,7 @@ const MonitorDetail = () => {
     const interval = setInterval(fetchData, 300000);
 
     return () => clearInterval(interval);
-  }, [id]);
+  }, [id, selectedRange]);
 
   // Countdown timer for next check
   useEffect(() => {
@@ -184,7 +186,8 @@ const MonitorDetail = () => {
         setTimeout(async () => {
           try {
             await fetchMonitorDetails();
-            await fetchMonitorChecks();
+            const rangeHours = selectedRange === '7d' ? 24 * 7 : selectedRange === '30d' ? 24 * 30 : 24;
+            await fetchMonitorChecks(rangeHours);
             hasTriggeredFetch = false; // Reset for next cycle
           } catch (error) {
             console.error('Auto-fetch error:', error);
@@ -234,11 +237,11 @@ const MonitorDetail = () => {
     }
   };
 
-  const fetchMonitorChecks = async () => {
+  const fetchMonitorChecks = async (hours = 24) => {
     const token = localStorage.getItem('auth_token');
 
     try {
-      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/monitors/${id}/checks?hours=168&limit=1000`, {
+      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/monitors/${id}/checks?hours=${hours}&limit=1000`, {
         headers: {
           'Authorization': `Bearer ${token}`,
         },
@@ -490,19 +493,11 @@ const MonitorDetail = () => {
       .slice()
       .reverse()
       .filter(check => check.responseTime !== null)
-      .reduce((unique, check) => {
-        // Only add if this timestamp doesn't exist yet
-        const timestamp = new Date(check.timestamp).getTime();
-        if (!unique.find(item => item.timestamp === timestamp)) {
-          unique.push({
-            time: formatTime(check.timestamp),
-            responseTime: check.responseTime,
-            status: check.status,
-            timestamp: timestamp
-          });
-        }
-        return unique;
-      }, []);
+      .map(check => ({
+        timestamp: new Date(check.timestamp).getTime(),
+        responseTime: check.responseTime,
+        status: check.status,
+      }));
   }, [checks]);
 
   const user = JSON.parse(localStorage.getItem('user') || '{}');
@@ -699,10 +694,14 @@ const MonitorDetail = () => {
             <div className="bg-[#0f0f0f] border border-white/10 rounded-lg p-6 mb-6">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-bold">Response time</h3>
-                <select className="bg-[#1a1a1a] border border-white/10 rounded px-3 py-1.5 text-sm">
-                  <option>Last 24 hours</option>
-                  <option>Last 7 days</option>
-                  <option>Last 30 days</option>
+                <select
+                  className="bg-[#1a1a1a] border border-white/10 rounded px-3 py-1.5 text-sm"
+                  value={selectedRange}
+                  onChange={(e) => setSelectedRange(e.target.value)}
+                >
+                  <option value="24h">Last 24 hours</option>
+                  <option value="7d">Last 7 days</option>
+                  <option value="30d">Last 30 days</option>
                 </select>
               </div>
 
@@ -711,7 +710,10 @@ const MonitorDetail = () => {
                   <LineChart data={chartData}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#333" />
                     <XAxis
-                      dataKey="time"
+                      dataKey="timestamp"
+                      type="number"
+                      domain={['auto', 'auto']}
+                      tickFormatter={(ts) => new Date(ts).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric' })}
                       stroke="#666"
                       tick={{ fill: '#999', fontSize: 11 }}
                     />
@@ -727,6 +729,7 @@ const MonitorDetail = () => {
                         borderRadius: '8px',
                         color: '#fff'
                       }}
+                      labelFormatter={(ts) => new Date(ts).toLocaleString()}
                     />
                     <Line
                       type="monotone"
