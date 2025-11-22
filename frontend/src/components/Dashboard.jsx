@@ -949,6 +949,8 @@ const Dashboard = () => {
                     onClick={() => {
                       if (item.id === 'incidents') {
                         navigate('/dashboard/incidents');
+                      } else if (item.id === 'status-pages') {
+                        navigate('/dashboard/status-pages');
                       } else {
                         setActiveTab(item.id);
                       }

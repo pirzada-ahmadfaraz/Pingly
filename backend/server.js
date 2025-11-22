@@ -1312,6 +1312,246 @@ app.get('/api/incidents', authenticateToken, async (req, res) => {
   }
 });
 
+// Status Pages API endpoints
+// Get all status pages for a user
+app.get('/api/status-pages', authenticateToken, async (req, res) => {
+  try {
+    const userEmail = req.user.email;
+    const user = await db.collection('users').findOne({ email: userEmail });
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const statusPages = await db.collection('status_pages').find({
+      userId: user._id
+    }).toArray();
+
+    res.json({ statusPages });
+  } catch (error) {
+    console.error('Error fetching status pages:', error);
+    res.status(500).json({ error: 'Failed to fetch status pages' });
+  }
+});
+
+// Create a new status page
+app.post('/api/status-pages', authenticateToken, async (req, res) => {
+  try {
+    const userEmail = req.user.email;
+    const user = await db.collection('users').findOne({ email: userEmail });
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const { name, logoUrl, faviconUrl } = req.body;
+
+    if (!name) {
+      return res.status(400).json({ error: 'Name is required' });
+    }
+
+    const statusPage = {
+      userId: user._id,
+      name,
+      logoUrl: logoUrl || '',
+      logoLinkUrl: '',
+      faviconUrl: faviconUrl || '',
+      sections: [{ name: 'Primary Services', monitors: [] }],
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    const result = await db.collection('status_pages').insertOne(statusPage);
+    statusPage._id = result.insertedId;
+
+    res.status(201).json({ statusPage });
+  } catch (error) {
+    console.error('Error creating status page:', error);
+    res.status(500).json({ error: 'Failed to create status page' });
+  }
+});
+
+// Get a specific status page
+app.get('/api/status-pages/:id', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userEmail = req.user.email;
+    const user = await db.collection('users').findOne({ email: userEmail });
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const statusPage = await db.collection('status_pages').findOne({
+      _id: new ObjectId(id),
+      userId: user._id
+    });
+
+    if (!statusPage) {
+      return res.status(404).json({ error: 'Status page not found' });
+    }
+
+    res.json({ statusPage });
+  } catch (error) {
+    console.error('Error fetching status page:', error);
+    res.status(500).json({ error: 'Failed to fetch status page' });
+  }
+});
+
+// Update a status page
+app.put('/api/status-pages/:id', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userEmail = req.user.email;
+    const user = await db.collection('users').findOne({ email: userEmail });
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const { name, logoUrl, logoLinkUrl, faviconUrl } = req.body;
+
+    const updateData = {
+      updatedAt: new Date(),
+    };
+
+    if (name) updateData.name = name;
+    if (logoUrl !== undefined) updateData.logoUrl = logoUrl;
+    if (logoLinkUrl !== undefined) updateData.logoLinkUrl = logoLinkUrl;
+    if (faviconUrl !== undefined) updateData.faviconUrl = faviconUrl;
+
+    const result = await db.collection('status_pages').updateOne(
+      { _id: new ObjectId(id), userId: user._id },
+      { $set: updateData }
+    );
+
+    if (result.matchedCount === 0) {
+      return res.status(404).json({ error: 'Status page not found' });
+    }
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error updating status page:', error);
+    res.status(500).json({ error: 'Failed to update status page' });
+  }
+});
+
+// Delete a status page
+app.delete('/api/status-pages/:id', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userEmail = req.user.email;
+    const user = await db.collection('users').findOne({ email: userEmail });
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const result = await db.collection('status_pages').deleteOne({
+      _id: new ObjectId(id),
+      userId: user._id
+    });
+
+    if (result.deletedCount === 0) {
+      return res.status(404).json({ error: 'Status page not found' });
+    }
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error deleting status page:', error);
+    res.status(500).json({ error: 'Failed to delete status page' });
+  }
+});
+
+// Save monitors for a status page
+app.post('/api/status-pages/:id/monitors', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userEmail = req.user.email;
+    const user = await db.collection('users').findOne({ email: userEmail });
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const { sections } = req.body;
+
+    if (!sections || !Array.isArray(sections)) {
+      return res.status(400).json({ error: 'Sections array is required' });
+    }
+
+    const result = await db.collection('status_pages').updateOne(
+      { _id: new ObjectId(id), userId: user._id },
+      { $set: { sections, updatedAt: new Date() } }
+    );
+
+    if (result.matchedCount === 0) {
+      return res.status(404).json({ error: 'Status page not found' });
+    }
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error saving monitors:', error);
+    res.status(500).json({ error: 'Failed to save monitors' });
+  }
+});
+
+// Public endpoint to get status page data (no auth required)
+app.get('/api/public/status-pages/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const statusPage = await db.collection('status_pages').findOne({
+      _id: new ObjectId(id)
+    });
+
+    if (!statusPage) {
+      return res.status(404).json({ error: 'Status page not found' });
+    }
+
+    // Fetch uptime data for each monitor in each section
+    const sectionsWithData = await Promise.all(
+      (statusPage.sections || []).map(async (section) => {
+        const monitorsWithData = await Promise.all(
+          (section.monitors || []).map(async (monitor) => {
+            // Get the last 60 checks for this monitor (for 7 days visualization)
+            const checks = await db.collection('monitor_checks').find({
+              monitorId: monitor._id
+            }).sort({ timestamp: -1 }).limit(60).toArray();
+
+            // Reverse to get chronological order
+            const uptimeData = checks.reverse().map(check => ({
+              status: check.status,
+              timestamp: check.timestamp
+            }));
+
+            return {
+              ...monitor,
+              uptimeData
+            };
+          })
+        );
+
+        return {
+          ...section,
+          monitors: monitorsWithData
+        };
+      })
+    );
+
+    res.json({
+      name: statusPage.name,
+      logoUrl: statusPage.logoUrl,
+      logoLinkUrl: statusPage.logoLinkUrl,
+      faviconUrl: statusPage.faviconUrl,
+      sections: sectionsWithData
+    });
+  } catch (error) {
+    console.error('Error fetching public status page:', error);
+    res.status(500).json({ error: 'Failed to fetch status page' });
+  }
+});
+
 // Monitor-specific integration routes
 app.get('/api/monitors/:monitorId/integrations', authenticateToken, async (req, res) => {
   try {

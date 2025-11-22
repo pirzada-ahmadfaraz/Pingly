@@ -554,6 +554,8 @@ const MonitorDetail = () => {
                         navigate('/dashboard', { state: { activeTab: 'integrations' } });
                       } else if (item.id === 'incidents') {
                         navigate('/dashboard/incidents');
+                      } else if (item.id === 'status-pages') {
+                        navigate('/dashboard/status-pages');
                       } else {
                         navigate('/dashboard');
                       }
