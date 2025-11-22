@@ -37,14 +37,22 @@ const PublicStatusPage = () => {
   const getOverallStatus = () => {
     if (!statusPage || !statusPage.sections) return 'operational';
 
+    let hasRecentIssues = false;
+
     for (const section of statusPage.sections) {
       for (const monitor of section.monitors) {
         if (monitor.lastStatus === 'down') {
           return 'down';
         }
+
+        // If any recent check was down, surface it so the page isn't falsely all green
+        if (Array.isArray(monitor.uptimeData) && monitor.uptimeData.some(d => d.status === 'down')) {
+          hasRecentIssues = true;
+        }
       }
     }
-    return 'operational';
+
+    return hasRecentIssues ? 'degraded' : 'operational';
   };
 
   const formatDate = (timestamp) => {
@@ -108,12 +116,6 @@ const PublicStatusPage = () => {
 
           <div className="flex gap-6">
             <button className="text-white font-medium">Services</button>
-            <button className="text-gray-400 hover:text-white transition-colors">
-              Status Updates
-            </button>
-            <button className="text-gray-400 hover:text-white transition-colors">
-              Get in touch
-            </button>
           </div>
         </div>
       </header>
@@ -123,14 +125,25 @@ const PublicStatusPage = () => {
         {/* Overall Status */}
         <div className="text-center mb-16">
           <div className="flex justify-center mb-6">
-            <div className={`w-24 h-24 rounded-full flex items-center justify-center ${
-              overallStatus === 'operational' ? 'bg-green-500' : 'bg-red-500'
-            }`}>
+            <div
+              className={`w-24 h-24 rounded-full flex items-center justify-center ${
+                overallStatus === 'operational'
+                  ? 'bg-green-500'
+                  : overallStatus === 'degraded'
+                    ? 'bg-yellow-500'
+                    : 'bg-red-500'
+              }`}
+            >
               {overallStatus === 'operational' && <Check size={48} className="text-white" />}
+              {overallStatus === 'degraded' && <Check size={48} className="text-white" />}
             </div>
           </div>
           <h1 className="text-4xl font-bold mb-4">
-            {overallStatus === 'operational' ? 'All services are online' : 'Some services are down'}
+            {overallStatus === 'operational'
+              ? 'All services are online'
+              : overallStatus === 'degraded'
+                ? 'Recent issues detected'
+                : 'Some services are down'}
           </h1>
           <p className="text-gray-400">
             As of {formatDate(new Date())}

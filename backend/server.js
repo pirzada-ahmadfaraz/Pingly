@@ -1523,10 +1523,10 @@ app.get('/api/public/status-pages/:id', async (req, res) => {
               return null; // Skip if monitor no longer exists
             }
 
-            // Get the last 60 checks for this monitor (for 7 days visualization)
+            // Get a generous slice of recent checks for visualization (cover multiple days)
             const checks = await db.collection('monitor_checks').find({
               monitorId: new ObjectId(monitor._id)
-            }).sort({ timestamp: -1 }).limit(60).toArray();
+            }).sort({ timestamp: -1 }).limit(500).toArray();
 
             // Reverse to get chronological order
             const uptimeData = checks.reverse().map(check => ({

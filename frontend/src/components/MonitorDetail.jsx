@@ -238,7 +238,7 @@ const MonitorDetail = () => {
     const token = localStorage.getItem('auth_token');
 
     try {
-      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/monitors/${id}/checks?hours=24&limit=100`, {
+      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/monitors/${id}/checks?hours=168&limit=1000`, {
         headers: {
           'Authorization': `Bearer ${token}`,
         },
