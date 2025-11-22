@@ -148,6 +148,7 @@ const StatusPageDetail = () => {
       setSections(newSections);
     }
     setSearchQuery('');
+    setIsSearchOpen(false);
   };
 
   const handleRemoveMonitorFromSection = (sectionIndex, monitorId) => {
