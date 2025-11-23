@@ -518,7 +518,7 @@ const LandingPage = () => {
             </div>
           </div>
           <div className="border-t border-white/10 pt-8 text-center text-sm text-gray-400">
-            <p>&copy; 2024 Pingly. All rights reserved.</p>
+            <p>&copy; 2025 Ahmad Faraz. All rights reserved.</p>
           </div>
         </div>
       </footer>
