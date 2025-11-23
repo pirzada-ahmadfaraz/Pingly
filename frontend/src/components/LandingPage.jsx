@@ -114,11 +114,11 @@ const LandingPage = () => {
         )}
       </header>
 
-      <section className="pt-32 pb-20 px-4">
-        <div className="container mx-auto text-center">
+      <section className="pt-32 pb-20">
+        <div className="container mx-auto text-center px-4">
           <h1 className="text-5xl md:text-7xl font-bold mb-6 leading-tight">
             Reliable Uptime Monitoring<br />& Public Status Pages<br />
-            <span className="text-gray-400">That Won’t Break the Bank </span>
+            <span className="text-gray-400">That Won't Break the Bank </span>
           </h1>
           <p className="text-xl md:text-2xl text-gray-400 mb-8 max-w-4xl mx-auto">
             Continuously monitor your websites, servers, and APIs with instant downtime alerts and build trust through beautiful status pages — all for a fraction of the cost.
@@ -129,16 +129,14 @@ const LandingPage = () => {
             </Button>
             <p className="text-sm text-gray-500">No credit card required</p>
           </div>
+        </div>
 
-          <div className="mt-16 rounded-lg border border-white/10 bg-gradient-to-br from-white/5 to-transparent p-8 backdrop-blur-sm">
-            <div className="bg-black/50 rounded-lg p-12 border border-white/10">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="h-32 bg-white/10 rounded animate-pulse"></div>
-                <div className="h-32 bg-white/10 rounded animate-pulse delay-100"></div>
-                <div className="h-32 bg-white/10 rounded animate-pulse delay-200"></div>
-              </div>
-            </div>
-          </div>
+        <div className="mt-16 px-4 md:px-8 lg:px-16">
+          <img
+            src="/preview.png"
+            alt="Pingly Dashboard Preview"
+            className="w-full rounded-xl shadow-2xl border border-white/10 hover:shadow-white/20 transition-shadow duration-300"
+          />
         </div>
       </section>
 
