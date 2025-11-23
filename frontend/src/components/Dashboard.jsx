@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { LayoutGrid, AlertCircle, FileText, Zap, Users, Settings, Globe, Radio, ChevronDown, Mail, Send, MessageCircle, Slack, MessageSquare, Bell, Phone, Webhook } from 'lucide-react';
+import { LayoutGrid, AlertCircle, FileText, Zap, Settings, Globe, Radio, ChevronDown, Mail, Send, MessageCircle, Slack, MessageSquare, Bell, Phone, Webhook } from 'lucide-react';
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -13,6 +13,7 @@ const Dashboard = () => {
   const [monitors, setMonitors] = useState([]);
   const [monitorsLoading, setMonitorsLoading] = useState(true);
   const dropdownRef = useRef(null);
+  const [settingsTab, setSettingsTab] = useState('general');
 
   // Integrations state
   const [selectedIntegration, setSelectedIntegration] = useState('email');
@@ -49,6 +50,13 @@ const Dashboard = () => {
   const [webhookConnected, setWebhookConnected] = useState(false);
   const [webhookLoading, setWebhookLoading] = useState(false);
   const [toast, setToast] = useState({ show: false, message: '' });
+  const [profileDetails, setProfileDetails] = useState({
+    name: '',
+    timezone: 'Asia/Kolkata (GMT +5:30)',
+    org: 'default',
+    changeOrg: 'default'
+  });
+  const [supportMessage, setSupportMessage] = useState('');
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -83,6 +91,15 @@ const Dashboard = () => {
 
     checkAuth();
   }, [navigate]);
+
+  useEffect(() => {
+    if (user) {
+      setProfileDetails(prev => ({
+        ...prev,
+        name: user.name || user.email?.split('@')[0] || prev.name
+      }));
+    }
+  }, [user]);
 
   // Fetch monitors
   useEffect(() => {
@@ -477,6 +494,10 @@ const Dashboard = () => {
     setTimeout(() => {
       setToast({ show: false, message: '' });
     }, 3000);
+  };
+
+  const handleSaveSettings = () => {
+    showToast('Settings saved');
   };
 
   // Discord handlers
@@ -922,7 +943,6 @@ const Dashboard = () => {
     { id: 'incidents', label: 'Incidents', icon: AlertCircle },
     { id: 'status-pages', label: 'Status Pages', icon: FileText },
     { id: 'integrations', label: 'Integrations', icon: Zap },
-    { id: 'users', label: 'Users', icon: Users },
     { id: 'settings', label: 'Settings', icon: Settings },
   ];
 
@@ -997,10 +1017,160 @@ const Dashboard = () => {
         {/* Center Content */}
         <div className="flex-1 p-8">
           <h1 className="text-3xl font-bold mb-8">
-            {activeTab === 'integrations' ? 'Integrations' : 'Monitors'}
+            {activeTab === 'integrations' ? 'Integrations' : activeTab === 'settings' ? 'Settings' : 'Monitors'}
           </h1>
 
-          {activeTab === 'integrations' ? (
+          {activeTab === 'settings' ? (
+            <div className="flex gap-6">
+              <div className="w-56 bg-[#0f0f0f] border border-white/10 rounded-lg p-4">
+                <div className="space-y-1">
+                  {[
+                    { id: 'general', label: 'General' },
+                    { id: 'subscriptions', label: 'Subscriptions' },
+                    { id: 'support', label: 'Support' },
+                  ].map(tab => (
+                    <button
+                      key={tab.id}
+                      onClick={() => setSettingsTab(tab.id)}
+                      className={`w-full text-left px-4 py-3 rounded-lg transition-colors ${
+                        settingsTab === tab.id ? 'bg-[#1a1a1a] text-white' : 'text-gray-400 hover:bg-[#1a1a1a]/50 hover:text-white'
+                      }`}
+                    >
+                      {tab.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex-1 space-y-6">
+                {settingsTab === 'general' && (
+                  <div className="space-y-6">
+                    <div className="bg-[#0f0f0f] border border-white/10 rounded-lg p-6">
+                      <h3 className="text-lg font-bold mb-2">Account Details</h3>
+                      <p className="text-gray-400 text-sm mb-6">Remember to click save to apply changes.</p>
+
+                      <div className="grid md:grid-cols-2 gap-6 mb-6">
+                        <div>
+                          <label className="block text-sm text-gray-400 mb-2">Your Name</label>
+                          <input
+                            type="text"
+                            value={profileDetails.name}
+                            onChange={(e) => setProfileDetails({ ...profileDetails, name: e.target.value })}
+                            className="w-full px-4 py-3 bg-[#1a1a1a] border border-white/10 rounded-lg text-white focus:outline-none focus:border-green-500/50"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm text-gray-400 mb-2">Timezone</label>
+                          <select
+                            value={profileDetails.timezone}
+                            onChange={(e) => setProfileDetails({ ...profileDetails, timezone: e.target.value })}
+                            className="w-full px-4 py-3 bg-[#1a1a1a] border border-white/10 rounded-lg text-white focus:outline-none focus:border-green-500/50"
+                          >
+                            <option>Asia/Kolkata (GMT +5:30)</option>
+                            <option>UTC</option>
+                            <option>America/New_York (GMT -4:00)</option>
+                            <option>Europe/London (GMT +1:00)</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-sm text-gray-400 mb-2">Current Organization</label>
+                          <input
+                            value={profileDetails.org}
+                            disabled
+                            className="w-full px-4 py-3 bg-[#1a1a1a] border border-white/10 rounded-lg text-white opacity-70"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm text-gray-400 mb-2">Change Organization</label>
+                          <select
+                            value={profileDetails.changeOrg}
+                            onChange={(e) => setProfileDetails({ ...profileDetails, changeOrg: e.target.value })}
+                            className="w-full px-4 py-3 bg-[#1a1a1a] border border-white/10 rounded-lg text-white focus:outline-none focus:border-green-500/50"
+                          >
+                            <option>default</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      <button
+                        onClick={handleSaveSettings}
+                        className="px-6 py-3 bg-green-500 hover:bg-green-600 rounded-lg font-medium transition-colors"
+                      >
+                        Save
+                      </button>
+                    </div>
+
+                    <div className="bg-[#0f0f0f] border border-white/10 rounded-lg p-6">
+                      <h3 className="text-lg font-bold mb-2">Primary Email</h3>
+                      <p className="text-gray-400 text-sm mb-4">Please contact support if you want to change your primary email.</p>
+                      <input
+                        value={user?.email || 'Not set'}
+                        disabled
+                        className="w-full px-4 py-3 bg-[#1a1a1a] border border-white/10 rounded-lg text-white opacity-70"
+                      />
+                    </div>
+
+                    <div className="bg-[#0f0f0f] border border-red-500/20 rounded-lg p-6">
+                      <h3 className="text-lg font-bold mb-2 text-white">Delete Account</h3>
+                      <p className="text-gray-400 text-sm mb-4">Contact support if you want to delete your account. This action cannot be undone.</p>
+                      <a
+                        href="mailto:support@pingly.app"
+                        className="inline-flex items-center gap-2 px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors"
+                      >
+                        Contact Support
+                      </a>
+                    </div>
+                  </div>
+                )}
+
+                {settingsTab === 'subscriptions' && (
+                  <div className="bg-[#0f0f0f] border border-white/10 rounded-lg p-6 space-y-4">
+                    <h3 className="text-lg font-bold">Subscriptions</h3>
+                    <p className="text-gray-400 text-sm">Manage your plan and billing.</p>
+                    <div className="bg-[#1a1a1a] border border-white/10 rounded-lg p-4 flex items-center justify-between">
+                      <div>
+                        <p className="text-white font-semibold">Starter Plan</p>
+                        <p className="text-gray-400 text-sm">Includes current monitor limits and status pages.</p>
+                      </div>
+                      <button className="px-5 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg font-medium transition-colors">
+                        Upgrade Plan
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {settingsTab === 'support' && (
+                  <div className="bg-[#0f0f0f] border border-white/10 rounded-lg p-6 space-y-4">
+                    <h3 className="text-lg font-bold">Support</h3>
+                    <p className="text-gray-400 text-sm">Need help? Reach out to us.</p>
+                    <textarea
+                      value={supportMessage}
+                      onChange={(e) => setSupportMessage(e.target.value)}
+                      placeholder="Describe your issue..."
+                      className="w-full min-h-[120px] px-4 py-3 bg-[#1a1a1a] border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-green-500/50"
+                    />
+                    <div className="flex gap-3">
+                      <a
+                        href={`mailto:support@pingly.app?subject=Support%20request&body=${encodeURIComponent(supportMessage)}`}
+                        className="px-6 py-3 bg-green-500 hover:bg-green-600 text-white rounded-lg font-medium transition-colors"
+                      >
+                        Contact Support
+                      </a>
+                      <button
+                        onClick={() => {
+                          setSupportMessage('');
+                          showToast('Support draft cleared');
+                        }}
+                        className="px-6 py-3 bg-[#1a1a1a] border border-white/10 rounded-lg text-white hover:bg-white/5 transition-colors"
+                      >
+                        Clear
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          ) : activeTab === 'integrations' ? (
             // Integrations View
             <div className="flex gap-6">
               {/* Integrations Sidebar */}
@@ -1685,101 +1855,105 @@ const Dashboard = () => {
           )}
         </div>
 
-        {/* Right Sidebar */}
-        <aside className="w-80 bg-[#0f0f0f] border-l border-white/10 p-6">
-          {/* New Monitor Dropdown */}
-          <div className="relative mb-8" ref={dropdownRef}>
-            <button
-              onClick={() => setShowMonitorDropdown(!showMonitorDropdown)}
-              className="w-full bg-green-500 hover:bg-green-600 text-white font-semibold py-3 px-4 rounded-lg transition-colors flex items-center justify-center gap-2"
-            >
-              <ChevronDown size={20} />
-              <span>New Monitor</span>
-            </button>
-
-            {/* Dropdown Menu */}
-            {showMonitorDropdown && (
-              <div className="absolute top-full left-0 right-0 mt-2 bg-[#1a1a1a] border border-white/10 rounded-lg overflow-hidden shadow-xl z-50">
-                {/* HTTP Monitor Option */}
+        {activeTab !== 'settings' && (
+          <>
+            {/* Right Sidebar */}
+            <aside className="w-80 bg-[#0f0f0f] border-l border-white/10 p-6">
+              {/* New Monitor Dropdown */}
+              <div className="relative mb-8" ref={dropdownRef}>
                 <button
-                  onClick={() => handleCreateMonitor('http')}
-                  className="w-full px-6 py-4 text-left hover:bg-white/5 transition-colors border-b border-white/10"
+                  onClick={() => setShowMonitorDropdown(!showMonitorDropdown)}
+                  className="w-full bg-green-500 hover:bg-green-600 text-white font-semibold py-3 px-4 rounded-lg transition-colors flex items-center justify-center gap-2"
                 >
-                  <div className="flex items-start gap-3">
-                    <Globe size={24} className="text-green-500 flex-shrink-0 mt-0.5" />
-                    <div>
-                      <h4 className="text-white font-semibold text-base mb-1">HTTP Monitor</h4>
-                      <p className="text-gray-400 text-sm">Monitor websites and API endpoints</p>
-                    </div>
-                  </div>
+                  <ChevronDown size={20} />
+                  <span>New Monitor</span>
                 </button>
 
-                {/* Ping Monitor Option */}
-                <button
-                  onClick={() => handleCreateMonitor('ping')}
-                  className="w-full px-6 py-4 text-left hover:bg-white/5 transition-colors"
-                >
-                  <div className="flex items-start gap-3">
-                    <Radio size={24} className="text-green-500 flex-shrink-0 mt-0.5" />
+                {/* Dropdown Menu */}
+                {showMonitorDropdown && (
+                  <div className="absolute top-full left-0 right-0 mt-2 bg-[#1a1a1a] border border-white/10 rounded-lg overflow-hidden shadow-xl z-50">
+                    {/* HTTP Monitor Option */}
+                    <button
+                      onClick={() => handleCreateMonitor('http')}
+                      className="w-full px-6 py-4 text-left hover:bg-white/5 transition-colors border-b border-white/10"
+                    >
+                      <div className="flex items-start gap-3">
+                        <Globe size={24} className="text-green-500 flex-shrink-0 mt-0.5" />
+                        <div>
+                          <h4 className="text-white font-semibold text-base mb-1">HTTP Monitor</h4>
+                          <p className="text-gray-400 text-sm">Monitor websites and API endpoints</p>
+                        </div>
+                      </div>
+                    </button>
+
+                    {/* Ping Monitor Option */}
+                    <button
+                      onClick={() => handleCreateMonitor('ping')}
+                      className="w-full px-6 py-4 text-left hover:bg-white/5 transition-colors"
+                    >
+                      <div className="flex items-start gap-3">
+                        <Radio size={24} className="text-green-500 flex-shrink-0 mt-0.5" />
+                        <div>
+                          <h4 className="text-white font-semibold text-base mb-1">Ping Monitor</h4>
+                          <p className="text-gray-400 text-sm">Monitor server availability using IP addresses</p>
+                        </div>
+                      </div>
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Current Status */}
+              <div className="mb-8">
+                <h3 className="text-lg font-bold mb-4">Current Status</h3>
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex gap-2">
+                    <span className="w-3 h-3 bg-green-500 rounded-full"></span>
+                    <span className="w-3 h-3 bg-red-500 rounded-full"></span>
+                    <span className="w-3 h-3 bg-gray-400 rounded-full"></span>
+                  </div>
+                </div>
+                <p className="text-sm text-gray-400">Using {monitors.length} out of 5 Monitors</p>
+              </div>
+
+              {/* Last 24 Hours */}
+              <div>
+                <h3 className="text-lg font-bold mb-4">Last 24 hours</h3>
+                <div className="space-y-6">
+                  <div className="flex justify-between items-start">
                     <div>
-                      <h4 className="text-white font-semibold text-base mb-1">Ping Monitor</h4>
-                      <p className="text-gray-400 text-sm">Monitor server availability using IP addresses</p>
+                      <p className="text-sm text-gray-400 mb-1">Overall</p>
+                      <p className="text-sm text-gray-400">Uptime</p>
+                    </div>
+                    <div className="text-3xl font-bold">
+                      {monitors.length > 0
+                        ? (monitors.reduce((sum, m) => sum + (m.uptime24h || 0), 0) / monitors.length).toFixed(1)
+                        : 0}%
                     </div>
                   </div>
-                </button>
-              </div>
-            )}
-          </div>
 
-          {/* Current Status */}
-          <div className="mb-8">
-            <h3 className="text-lg font-bold mb-4">Current Status</h3>
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex gap-2">
-                <span className="w-3 h-3 bg-green-500 rounded-full"></span>
-                <span className="w-3 h-3 bg-red-500 rounded-full"></span>
-                <span className="w-3 h-3 bg-gray-400 rounded-full"></span>
-              </div>
-            </div>
-            <p className="text-sm text-gray-400">Using {monitors.length} out of 5 Monitors</p>
-          </div>
+                  <div className="flex justify-between items-center">
+                    <p className="text-sm text-gray-400">Incidents</p>
+                    <p className="text-3xl font-bold">
+                      {monitors.filter(m => m.lastStatus === 'down').length}
+                    </p>
+                  </div>
 
-          {/* Last 24 Hours */}
-          <div>
-            <h3 className="text-lg font-bold mb-4">Last 24 hours</h3>
-            <div className="space-y-6">
-              <div className="flex justify-between items-start">
-                <div>
-                  <p className="text-sm text-gray-400 mb-1">Overall</p>
-                  <p className="text-sm text-gray-400">Uptime</p>
-                </div>
-                <div className="text-3xl font-bold">
-                  {monitors.length > 0
-                    ? (monitors.reduce((sum, m) => sum + (m.uptime24h || 0), 0) / monitors.length).toFixed(1)
-                    : 0}%
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-sm text-gray-400 mb-1">Active</p>
+                      <p className="text-2xl font-bold">{monitors.filter(m => m.lastStatus === 'up').length}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-400 mb-1">Down</p>
+                      <p className="text-2xl font-bold">{monitors.filter(m => m.lastStatus === 'down').length}</p>
+                    </div>
+                  </div>
                 </div>
               </div>
-
-              <div className="flex justify-between items-center">
-                <p className="text-sm text-gray-400">Incidents</p>
-                <p className="text-3xl font-bold">
-                  {monitors.filter(m => m.lastStatus === 'down').length}
-                </p>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm text-gray-400 mb-1">Active</p>
-                  <p className="text-2xl font-bold">{monitors.filter(m => m.lastStatus === 'up').length}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-400 mb-1">Down</p>
-                  <p className="text-2xl font-bold">{monitors.filter(m => m.lastStatus === 'down').length}</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </aside>
+            </aside>
+          </>
+        )}
       </main>
 
       {/* Toast Notification */}

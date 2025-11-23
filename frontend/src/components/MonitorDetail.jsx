@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { LayoutGrid, AlertCircle, FileText, Zap, Users, Settings, ChevronRight, Pause, Play, Mail, Send, MessageCircle, Slack, MessageSquare, Bell, Phone, Webhook, X } from 'lucide-react';
+import { LayoutGrid, AlertCircle, FileText, Zap, Settings, ChevronRight, Pause, Play, Mail, Send, MessageCircle, Slack, MessageSquare, Bell, Phone, Webhook, X } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 const MonitorDetail = () => {
@@ -31,7 +31,6 @@ const MonitorDetail = () => {
     { id: 'incidents', label: 'Incidents', icon: AlertCircle },
     { id: 'status-pages', label: 'Status Pages', icon: FileText },
     { id: 'integrations', label: 'Integrations', icon: Zap },
-    { id: 'users', label: 'Users', icon: Users },
     { id: 'settings', label: 'Settings', icon: Settings },
   ];
 

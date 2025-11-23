@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { LayoutGrid, AlertCircle, FileText, Zap, Users, Settings, ChevronRight, Lock, Mail, Send, MessageCircle, Slack, MessageSquare, Bell, Phone, Webhook } from 'lucide-react';
+import { LayoutGrid, AlertCircle, FileText, Zap, Settings, ChevronRight, Lock, Mail, Send, MessageCircle, Slack, MessageSquare, Bell, Phone, Webhook } from 'lucide-react';
 
 const CreatePingMonitor = () => {
   const navigate = useNavigate();
@@ -18,7 +18,6 @@ const CreatePingMonitor = () => {
     { id: 'incidents', label: 'Incidents', icon: AlertCircle },
     { id: 'status-pages', label: 'Status Pages', icon: FileText },
     { id: 'integrations', label: 'Integrations', icon: Zap },
-    { id: 'users', label: 'Users', icon: Users },
     { id: 'settings', label: 'Settings', icon: Settings },
   ];
 

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronRight, Check, LayoutGrid, AlertCircle, FileText, Zap, Users, Settings } from 'lucide-react';
+import { ChevronRight, Check, LayoutGrid, AlertCircle, FileText, Zap, Settings } from 'lucide-react';
 
 const CreateStatusPage = () => {
   const navigate = useNavigate();
@@ -16,7 +16,6 @@ const CreateStatusPage = () => {
     { id: 'incidents', label: 'Incidents', icon: AlertCircle },
     { id: 'status-pages', label: 'Status Pages', icon: FileText },
     { id: 'integrations', label: 'Integrations', icon: Zap },
-    { id: 'users', label: 'Users', icon: Users },
     { id: 'settings', label: 'Settings', icon: Settings },
   ];
 

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { LayoutGrid, AlertCircle, FileText, Zap, Users, Settings, Filter, Search } from 'lucide-react';
+import { LayoutGrid, AlertCircle, FileText, Zap, Settings, Filter, Search } from 'lucide-react';
 
 const Incidents = () => {
   const navigate = useNavigate();
@@ -17,7 +17,6 @@ const Incidents = () => {
     { id: 'incidents', label: 'Incidents', icon: AlertCircle },
     { id: 'status-pages', label: 'Status Pages', icon: FileText },
     { id: 'integrations', label: 'Integrations', icon: Zap },
-    { id: 'users', label: 'Users', icon: Users },
     { id: 'settings', label: 'Settings', icon: Settings },
   ];
 
